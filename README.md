@@ -77,30 +77,6 @@ For Rarity to generate the bindings, you will need to create a binding YML file 
 The Rarity script will recursively look for yml file which name starts with 'bindings-', so your YML file must begin
 with those characters (ex: bindings-myclass.yml).
 
-Notes on API generation
-==
-Naming convention
-=
-In Ruby, methods name are supposed to be written in snake case. Note that regardless of your naming convention in C++,
-the Ruby bindings will use snake case (this means that in our previous example, the API generated for MyClass is actually:
-
-    MyClass#initialize
-    MyClass#get_name
-    MyClass#set_name
-
-Initialize
-=
-It is possible not to expose any constructor to Ruby, in which case it will be impossible from Ruby scripts to
-instantiate the class.
-Memory Management
-=
-Depending the context in which objects are created, they might not answer of the same garbage collecting rules.
-If you create an object from Ruby using the "new" method, your object will answer to Ruby's garbage collector. The C++
-object linked will be destroyed when Ruby garbages collect its Ruby counterpart. However, if your object is instantiated
-from C++, you will have to delete it yourself.
-It is, thus, possible that a Ruby object outlives its C++ counterpart. In which case the Ruby object will not crash the
-application, however it will throw an exception.
-
 How to use the bindings from a C++ application ?
 ===
 Rarity also comes with a set of tools for easily using the bindings. A few objects allow to use Ruby objects from C++ and
@@ -153,3 +129,29 @@ Let's write a Ruby script c++ main using our previous bindings:
     }
     
 And that's it. We've overseen pretty much everything Rarity offers.
+
+
+Notes on API generation
+======
+Naming convention
+============
+In Ruby, methods name are supposed to be written in snake case. Note that regardless of your naming convention in C++,
+the Ruby bindings will use snake case (this means that in our previous example, the API generated for MyClass is actually:
+
+    MyClass#initialize
+    MyClass#get_name
+    MyClass#set_name
+
+Initialize
+============
+It is possible not to expose any constructor to Ruby, in which case it will be impossible from Ruby scripts to
+instantiate the class.
+Memory Management
+
+============
+Depending the context in which objects are created, they might not answer of the same garbage collecting rules.
+If you create an object from Ruby using the "new" method, your object will answer to Ruby's garbage collector. The C++
+object linked will be destroyed when Ruby garbages collect its Ruby counterpart. However, if your object is instantiated
+from C++, you will have to delete it yourself.
+It is, thus, possible that a Ruby object outlives its C++ counterpart. In which case the Ruby object will not crash the
+application, however it will throw an exception.
