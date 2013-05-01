@@ -83,9 +83,11 @@ Naming convention
 =
 In Ruby, methods name are supposed to be written in snake case. Note that regardless of your naming convention in C++,
 the Ruby bindings will use snake case (this means that in our previous example, the API generated for MyClass is actually:
+
     MyClass#initialize
     MyClass#get_name
     MyClass#set_name
+
 Initialize
 =
 It is possible not to expose any constructor to Ruby, in which case it will be impossible from Ruby scripts to
@@ -106,6 +108,7 @@ handle exceptions propely.
 Let's write a Ruby script c++ main using our previous bindings:
 
 ./scripts/test,rb
+
     class MyRubyClass
       def initialize
         puts "Initalizing ruby class"
@@ -119,6 +122,7 @@ Let's write a Ruby script c++ main using our previous bindings:
     end
 
 ./main.cpp
+
     #include "rarity.hpp"
     #include "myclass.hpp"
     
