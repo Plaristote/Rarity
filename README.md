@@ -146,12 +146,14 @@ Initialize
 ============
 It is possible not to expose any constructor to Ruby, in which case it will be impossible from Ruby scripts to
 instantiate the class.
-Memory Management
 
+Memory Management
 ============
 Depending the context in which objects are created, they might not answer of the same garbage collecting rules.
+
 If you create an object from Ruby using the "new" method, your object will answer to Ruby's garbage collector. The C++
 object linked will be destroyed when Ruby garbages collect its Ruby counterpart. However, if your object is instantiated
 from C++, you will have to delete it yourself.
-It is, thus, possible that a Ruby object outlives its C++ counterpart. In which case the Ruby object will not crash the
+
+Consequently, It is possible that a Ruby object outlives its C++ counterpart. In which case the Ruby object will not crash the
 application, however it will throw an exception.
