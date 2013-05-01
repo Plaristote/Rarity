@@ -143,7 +143,7 @@ Let's write a Ruby script c++ main using our previous bindings:
         my_ruby_instance.Apply("run"); // Call the same script method using the default parameter value
 
       }
-      catch (const std::exception* e)
+      catch (const std::exception* e) // Ruby exceptions are converted to std::exception compatible objects
       {
         std::cerr << "Catched exception " << e->what() << std::endl;
       }
