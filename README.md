@@ -21,7 +21,7 @@ Let's say you have a C++ class to export, this one for instance:
          return (name);
        }
        
-      void SetName(const std::string& str) const
+      void SetName(const std::string& str)
       {
         name = str;
       }
@@ -44,7 +44,7 @@ C++ and Ruby must include this component. After including the component, our cod
          return (name);
        }
        
-      void SetName(const std::string& str) const
+      void SetName(const std::string& str)
       {
         name = str;
       }
@@ -70,7 +70,7 @@ For Rarity to generate the bindings, you will need to create a binding YML file 
           return: std::string
         SetName:
           params:
-            std::string
+            - std::string
           return: void
 
 
@@ -111,13 +111,13 @@ Let's write a Ruby script c++ main using our previous bindings:
 
     class MyRubyClass
       def initialize
-        puts "Initalizing ruby class"
+        puts "Initializing ruby class"
         @my_class = MyClass.new "Name set from ruby"
       end
       
       def run my_class = nil
         my_class ||= @my_class
-        puts "[Ruby] #{prefix} -> #{my_class.get_name}"
+        puts "[Ruby] #{my_class.get_name}"
       end
     end
 
@@ -129,6 +129,7 @@ Let's write a Ruby script c++ main using our previous bindings:
     int main(void)
     {
       RarityInitialize(); // Must be called before any construction of RarityClass instances
+      try
       {
         MyClass my_class("C++ created MyClass");
       
@@ -138,11 +139,15 @@ Let's write a Ruby script c++ main using our previous bindings:
         Ruby::Constant my_ruby_class("MyRubyClass");
         Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");
 
-        my_ruby_instance.Apply("run");
         my_ruby_instance.Apply("run", 1, &my_class); // Method name, argument count, argument list of pointers to Rarity objects
+        my_ruby_instance.Apply("run"); // Call the same script method using the default parameter value
 
-        Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
       }
+      catch (const std::exception* e)
+      {
+        std::cerr << "Catched exception " << e->what() << std::endl;
+      }
+      Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
       RarityFinalize();
       return (0);
     }
