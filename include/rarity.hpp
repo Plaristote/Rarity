@@ -107,7 +107,7 @@ public:
 
       rb_define_alias(ruby_class, "initialize", "_real_initialize");
 
-      rb_ivar_set(ruby_instance, pointer_symbol, INT2FIX((long)this));
+      SetRubyInstance(ruby_instance);
       VALUE ruby_ptr = rb_ivar_get(ruby_instance, pointer_symbol);
       if (NUM2LONG(ruby_ptr) != (long)this)
         std::cout << "MY PRIMARY FUNCTION IS FAILURE" << std::endl;
@@ -125,6 +125,12 @@ public:
   }
 
   VALUE GetRubyInstance(void) const { return (ruby_instance); }
+
+  void  SetRubyInstance(VALUE val)
+  {
+    ruby_instance = val;
+    rb_ivar_set(ruby_instance, pointer_symbol, INT2FIX((long)this));
+  }
 
   operator VALUE() const
   {

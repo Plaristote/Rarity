@@ -1,0 +1,13 @@
+MyClass:
+  include: 'myclass.hpp' # The path to the file including your class
+  methods:
+    initialize: # The 'initialize' method will call for the C++ constructor.
+      params:
+        - std::string
+      return: void
+    GetName:
+      return: std::string
+    SetName:
+      params:
+        - std::string
+      return: void

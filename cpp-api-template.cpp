@@ -24,9 +24,9 @@ static long get_instance_pointer(VALUE self)
   return (NUM2LONG(variable));
 }
 
-static VALUE RarityClassFinalize(VALUE self)
+static VALUE RarityClassFinalize(VALUE, VALUE param)
 {
-  long ptr = NUM2LONG(self);
+  long ptr = NUM2LONG(param);
 
   delete ((RarityClass*)ptr);
   return (Qnil);
@@ -80,13 +80,12 @@ typedef VALUE (*RubyMethod)(...);
       RarityClass*      instance = new <%= classname %>(<%= desc['params_apply'] %>);
       Ruby::Object      proc;
 
+      instance->SetRubyInstance(self);
       stream << (long)instance;
-      std::cout << "Test1" << std::endl;
       proc = Ruby::Evaluate("Proc.new do (<%= classname %>.finalize " + stream.str() + ") end");
-      std::cout << "Test2" << std::endl;
       os.Apply("define_finalizer", 2, instance, &proc);
-      std::cout << "Test3" << std::endl;
-      return (*instance);
+
+      return (Qnil);
     }<% else %>
     VALUE binding_<%= classname %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
     {

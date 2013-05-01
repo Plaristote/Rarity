@@ -71,25 +71,25 @@ classes.each do |classname, klass|
   includes << klass['include']
   klass['methods'].each do |name, method|
     method['binding_params']   = String.new
-
-    method['params'].count.times do |it|
-      method['binding_params'] += ", VALUE param_#{it}"
-    end unless method['params'].nil?
-
-    method['params_apply'] = ''
-    method['params'].each_with_index do |param, index|
-      method['params_apply'] += ', ' if method['params_apply'] != ''
-      if param == 'std::string' or param == 'string'
-        method['params_apply'] += "(RubyToCpp::String(param_#{index}))"
-      elsif param == 'unsigned int'
-        method['params_apply'] += "(RubyToCpp::UnsignedInt(param_#{index}))"
-      elsif supported_types.include? param
-        method['params_apply'] += "(RubyToCpp::#{param.capitalize}(param_#{index}))"
-      else
-        method['params_apply'] += "(api_param<#{param}>(param_#{index}, \"#{param}\"))"
+    method['params_apply']     = ''
+    unless method['params'].nil?
+      method['params'].count.times do |it|
+        method['binding_params'] += ", VALUE param_#{it}"
       end
-    end unless method['params'].nil?
 
+      method['params'].each_with_index do |param, index|
+        method['params_apply'] += ', ' if method['params_apply'] != ''
+        if param == 'std::string' or param == 'string'
+          method['params_apply'] += "(RubyToCpp::String(param_#{index}))"
+        elsif param == 'unsigned int'
+          method['params_apply'] += "(RubyToCpp::UnsignedInt(param_#{index}))"
+        elsif supported_types.include? param
+          method['params_apply'] += "(RubyToCpp::#{param.capitalize}(param_#{index}))"
+        else
+          method['params_apply'] += "(api_param<#{param}>(param_#{index}, \"#{param}\"))"
+        end
+      end
+    end
   end unless klass['methods'].nil?
 end
 
