@@ -5,6 +5,19 @@ Code generator for binding C++ APIs to Ruby with no sweat.
 Rarity consists in a few header files you will need to include to your project and a script that will generate
 your bindings by checking out a YML file containing your bindings description.
 
+Usage
+===
+By default, go into your project's directory and execute the following (replacing $RARITY_PATH with the path to the rarity.rb script)
+
+      ruby $RARITY_PATH/rarity.rb
+      
+This will create a rarity-bindings.cpp file in the current directory that you will need to link to your project.
+You will also have to add the include directory $RARITY_PATH/include and link with a ruby library.
+
+You can also specify your own input directory and output file like this:
+
+      ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp
+
 How to generate bindings for a class ?
 ===
 The Rarity script will recursively look for binding yml files describing C++ classes to bind with Ruby.
