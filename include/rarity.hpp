@@ -21,8 +21,11 @@ namespace Ruby
  */
 struct IRarityClass
 {
+  virtual ~IRarityClass() {}
   virtual VALUE GetRubyInstance(void) const = 0;
 };
+
+# include "rarity_object.hpp"
 
 class RarityType : public IRarityClass
 {
@@ -91,6 +94,238 @@ private:
   ContentType content_type;
 };
 
+#include <vector>
+#include <algorithm>
+
+class RarityClass;
+
+namespace Ruby
+{
+  template<bool>
+  struct HandleRarityClass
+  {
+    template<typename TYPE>
+    static IRarityClass* RubyType(TYPE type)
+    {
+      return (new Ruby::Object(type->GetRubyInstance()));
+    }
+  };
+
+  template<>
+  struct HandleRarityClass<false>
+  {
+    template<typename TYPE>
+    static IRarityClass* RubyType(TYPE type)
+    {
+      return (new RarityType(type));
+    }
+  };
+
+  template<typename A, typename B>
+  struct IsBaseOf : public std::is_base_of<A, B> {};
+
+  template<typename A, typename B>
+  struct IsBaseOf<A*, B*> : public std::is_base_of<A, B> {};
+
+  template<typename TYPE>
+  IRarityClass* ToRubyType(TYPE& type)
+  {
+    return (HandleRarityClass<IsBaseOf<RarityClass*, TYPE>::value>::template RubyType(type));
+  }
+
+  template<typename TYPE>
+  TYPE          ToCppType(VALUE value);
+
+  template<> IRarityClass* ToRubyType<IRarityClass*>(IRarityClass*& type);
+
+  template<int it, typename Current, typename... Args>
+  void LoadParams(VALUE* arguments, Current arg, Args... args)
+  {
+    IRarityClass* i = ToRubyType(arg);
+
+    arguments[it]   = i->GetRubyInstance();
+    delete i;
+    LoadParams<it + 1, Args...>(arguments, args...);
+  }
+
+  template<int it, typename Current>
+  void LoadParams(VALUE* arguments, Current arg)
+  {
+    IRarityClass* i = ToRubyType(arg);
+
+    arguments[it] = i->GetRubyInstance();
+    delete i;
+  }
+
+  class Lambda : public Object
+  {
+  public:
+    Lambda(VALUE instance) : Object(instance) {}
+
+    template<typename RET, typename... Args>
+    RET Call(Args... args)
+    {
+      unsigned int   arg_count = sizeof...(Args);
+      VALUE          result;
+      int            state     = 0;
+
+      values = new VALUE[sizeof...(Args)];
+      LoadParams<0, Args...>(values, args...);
+      method = Symbol("call");
+      argc   = arg_count;
+      result = rb_protect(WrappedApply, reinterpret_cast<VALUE>(this), &state);
+      if (state)
+        throw new Ruby::Exception();
+    }
+
+    template<typename RET, typename... Args>
+    operator std::function<RET (Args...)>() const
+    {
+      VALUE self = instance;
+
+      return (std::function<RET (Args...)>([self](Args... args) -> RET
+      {
+        Lambda lambda(self);
+
+        lambda.Call<RET, Args...>(args...);
+      }));
+    }
+
+  private:
+  };
+
+  class Array : public Object
+  {
+  public:
+    Array(void)       : Object(rb_ary_new()) {}
+    Array(VALUE copy) : Object(copy)         {}
+
+    template<typename TYPE>
+    Array(const std::vector<TYPE>& array)
+    {
+      instance = rb_ary_new();
+      std::for_each(array.begin(), array.end(), [this](TYPE& copy)
+      {
+        IRarityClass* tmp = Ruby::ToRubyType(copy);
+
+        rb_ary_push(instance, tmp->GetRubyInstance());
+        delete tmp;
+      });
+    }
+
+    template<typename TYPE>
+    std::vector<TYPE> AsVector()
+    {
+      unsigned int      i    = 0;
+      unsigned int      size = NUM2UINT((VALUE)(Apply("count")));
+      std::vector<TYPE> vector;
+
+      for (; i < size ; ++i)
+      {
+        Ruby::Object value(rb_ary_entry(instance, i));
+
+        vector.push_back(ToCppType<TYPE>(value));
+      }
+      return (vector);
+    }
+
+    template<typename TYPE>
+    operator std::vector<TYPE>() const
+    {
+      Array cpy(instance);
+
+      return (cpy.AsVector<TYPE>());
+    }
+  };
+
+  template<bool IsArray>
+  struct HandleArray
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      Ruby::Array my_array(value);
+
+      return (my_array);
+    }
+  };
+
+  template<bool IsRarity>
+  struct HandleRarity
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      VALUE pointer = rb_ivar_get(value, rb_intern("@rarity_cpp_pointer"));
+
+      if (pointer == Qnil)
+        throw true; // Nil Rarity Class
+      return (reinterpret_cast<TYPE>(NUM2LONG(pointer)));
+    }
+  };
+
+  template<>
+  struct HandleRarity<false>
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      throw false; // Unhandled ruby type
+    }
+  };
+
+  template<>
+  struct HandleArray<false>
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      return (HandleRarity<IsBaseOf<RarityClass*, TYPE>::value>::template CppType<TYPE>(value));
+    }
+  };
+
+  template<typename>
+  struct is_std_vector : std::false_type {};
+
+  template<typename T, typename A>
+  struct is_std_vector<std::vector<T,A> > : std::true_type {};
+
+  template<typename>
+  struct is_std_function : public std::false_type {};
+
+  template<typename A, typename... Args>
+  struct is_std_function<std::function<A (Args...)> > : public std::true_type {};
+
+  template<bool>
+  struct HandleFunction
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      Lambda lambda(value);
+
+      return (lambda);
+    }
+  };
+
+  template<>
+  struct HandleFunction<false>
+  {
+    template<typename TYPE>
+    static TYPE CppType(VALUE value)
+    {
+      return (HandleArray<is_std_vector<TYPE>::value>::template CppType<TYPE>(value));  
+    }
+  };
+
+  template<typename TYPE>
+  TYPE          ToCppType(VALUE value)
+  {
+    return (HandleFunction<is_std_function<TYPE>::value>::template CppType<TYPE>(value));
+  }
+}
+
+
 class RarityClass : public IRarityClass
 {
 public:
@@ -143,7 +378,5 @@ private:
   VALUE     ruby_instance;
   VALUE     ruby_class;
 };
-
-# include "rarity_object.hpp"
 
 #endif

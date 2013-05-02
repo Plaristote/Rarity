@@ -30,7 +30,7 @@ namespace Ruby
 
     operator VALUE() const { return (instance); }
 
-  private:
+  protected:
     VALUE instance;
 
     // Call Wrapper

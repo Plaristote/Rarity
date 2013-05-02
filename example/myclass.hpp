@@ -25,8 +25,43 @@
     name = str;
   }
 
+  void PrintArray(const std::vector<std::string>& array)
+  {
+    std::cout << name << " printing array" << std::endl;
+    std::for_each(array.begin(), array.end(), [](std::string value)
+    {
+      std::cout << "- " << value << std::endl;
+    });
+  }
+
  private:
    std::string name;
- }; 
+ };
+
+ class MyOtherClass : public RarityClass
+ {
+ public:
+   MyOtherClass(void) : RarityClass("MyOtherClass")
+   {
+     my_class = 0;
+   }
+
+   void         SetMyClass(MyClass* self)
+   {
+     my_class = self;
+   }
+
+   unsigned int PrintName(void) const
+   {
+     if (my_class != 0)
+       std::cout << "MyOtherClass PrintName -> " << my_class->GetName() << std::endl;
+     else
+       std::cout << "MyOtherClass PrintName -> nil pointer" << std::endl;
+     return (42);
+   }
+
+ private:
+   MyClass* my_class;
+ };
 
 #endif

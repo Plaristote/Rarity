@@ -11,3 +11,19 @@ MyClass:
       params:
         - std::string
       return: void
+    PrintArray:
+      params:
+        - std::vector<std::string>
+      return: void
+
+MyOtherClass:
+  include: 'myclass.hpp'
+  methods:
+    initialize:
+      return: void
+    SetMyClass:
+      return: void
+      params:
+        - MyClass*
+    PrintName:
+      return: void

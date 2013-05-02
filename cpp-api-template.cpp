@@ -32,38 +32,26 @@ static VALUE RarityClassFinalize(VALUE, VALUE param)
   return (Qnil);
 }
 
-template<typename ExpectedType>
-static ExpectedType* api_param(VALUE self, const std::string& name)
+namespace Ruby
 {
-  long         ptr             = get_instance_pointer(self);
-  RarityClass* rarity_instance = reinterpret_cast<RarityClass*>(ptr);
-
-  if (get_class_by_name(name) != rarity_instance->GetRubyType())
-  {
-    // Throw ArgumentError
-    return (0);
-  }
-  return (reinterpret_cast<ExpectedType*>(rarity_instance));
+  template<> Ruby::Object ToCppType<Ruby::Object>(VALUE value) { return (value); }
+  template<> std::string  ToCppType<std::string>(VALUE value)  { return (std::string(RSTRING_PTR(value))); }
+  template<> bool         ToCppType<bool>(VALUE value)         { return (value == Qtrue ? true : false); }
+  template<> float        ToCppType<float>(VALUE value)        { return (NUM2DBL(value)); }
+  template<> int          ToCppType<int>(VALUE value)          { return (NUM2INT(value));  }
+  template<> unsigned int ToCppType<unsigned int>(VALUE value) { return (NUM2UINT(value)); }
+  template<> long         ToCppType<long>(VALUE value)         { return (NUM2LONG(value)); }
+  template<> double       ToCppType<double>(VALUE value)       { return (NUM2LONG(value)); }
 }
 
-namespace RubyToCpp
+template<typename T>
+VALUE CppToRuby(T var)
 {
-  std::string  String(VALUE value)      { return (std::string(RSTRING_PTR(value))); }
-  bool         Bool(VALUE value)        { return (value == Qtrue);  }
-  float        Float(VALUE value)       { return (NUM2DBL(value));  }
-  int          Int(VALUE value)         { return (NUM2INT(value));  }
-  unsigned int UnsignedInt(VALUE value) { return (NUM2UINT(value)); }
-  long         Long(VALUE value)        { return (NUM2LONG(value)); }
-  double       Double(VALUE value)      { return (NUM2LONG(value)); }
-}
+  IRarityClass* rarity_class = Ruby::ToRubyType<T>(var);
+  VALUE         value        = rarity_class->GetRubyInstance();
 
-namespace CppToRuby
-{
-  VALUE String(const std::string& value) { return (rb_str_new2(value.c_str())); }
-  VALUE Bool(bool value)                 { return (value ? Qtrue : Qfalse); }
-  VALUE Float(float value)               { return (rb_float_new(value)); }
-  VALUE Int(int value)                   { return (INT2NUM(value)); }
-  VALUE UnsignedInt(unsigned int value)  { return (UINT2NUM(value)); }
+  delete rarity_class;
+  return (value);
 }
 
 typedef VALUE (*RubyMethod)(...);
@@ -215,6 +203,12 @@ namespace Ruby
     VALUE ret = rb_funcall2(value, rb_intern("inspect"), 0, 0);
 
     return (RSTRING_PTR(ret));
+  }
+
+  template<>
+  IRarityClass* ToRubyType<IRarityClass*>(IRarityClass*& type)
+  {
+    return (new Object(type->GetRubyInstance()));
   }
 }
 

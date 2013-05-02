@@ -15,29 +15,7 @@ end
 class CppHelpers
 class << self
   def _return name, type
-    map = {
-      'std::string'   => "(CppToRuby::String(#{name}))",
-      'string'        => "(CppToRuby::String(#{name}))",
-      'int'           => "(CppToRuby::Int(#{name}))",
-      'unsigned int'  => "(CppToRuby::UnsignedInt(#{name}))",
-      'bool'          => "(CppToRuby::Bool(#{name}))",
-      'float'         => "(CppToRuby::Float(#{name}))",
-      'std::string*'  => "(CppToRuby::String(*#{name}))",
-      'string*'       => "(CppToRuby::String(*#{name}))",
-      'int*'          => "(CppToRuby::Int(*#{name}))",
-      'unsigned int*' => "(CppToRuby::UnsignedInt(*#{name}))",
-      'bool*'         => "(CppToRuby::Bool(*#{name}))",
-      'float*'        => "(CppToRuby::Float(*#{name}))",
-    }
-    if map[type].nil?
-      if type.include? '*'
-        '*' + name
-      else
-        name
-      end
-    else
-      map[type]
-    end
+    "(CppToRuby(#{name}))"
   end
 end
 end
@@ -79,6 +57,8 @@ classes.each do |classname, klass|
 
       method['params'].each_with_index do |param, index|
         method['params_apply'] += ', ' if method['params_apply'] != ''
+        method['params_apply'] += "(Ruby::ToCppType<#{param}>(param_#{index}))"
+        next
         if param == 'std::string' or param == 'string'
           method['params_apply'] += "(RubyToCpp::String(param_#{index}))"
         elsif param == 'unsigned int'
