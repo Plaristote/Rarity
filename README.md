@@ -3,7 +3,7 @@ Rarity
 
 Code generator for binding C++ APIs to Ruby with no sweat.
 Rarity consists of a few header files you will need to include in your project and a script that will generate
-your bindings by checking out a YML file containing your bindings description.
+your bindings by checking out a YAML file containing your bindings description.
 
 Usage
 ===
@@ -49,7 +49,7 @@ Notice that your constructor needs to call RarityClass's constructor, which take
 that will be bound with this class.
 
 Now to the actual binding part.
-For Rarity to generate the bindings, you will need to create a binding YML file that will look like this:
+For Rarity to generate the bindings, you will need to create a binding YAML file that will look like this:
 
 ./bindings-myclass.yml
 
@@ -68,7 +68,7 @@ For Rarity to generate the bindings, you will need to create a binding YML file 
           return: void
 
 
-The Rarity script will recursively look for yml files whose names start with 'bindings-', so your YML file must begin
+The Rarity script will recursively look for YAML files whose names start with 'bindings-', so your YAML file must begin
 with those characters (e.g.: bindings-myclass.yml).
 
 How to use the bindings from a C++ application?
