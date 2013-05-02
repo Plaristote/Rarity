@@ -50,6 +50,7 @@ classes.each do |classname, klass|
   klass['methods'].each do |name, method|
     method['binding_params']   = String.new
     method['params_apply']     = ''
+    method['params_check']     = ''
     unless method['params'].nil?
       method['params'].count.times do |it|
         method['binding_params'] += ", VALUE param_#{it}"
@@ -58,16 +59,16 @@ classes.each do |classname, klass|
       method['params'].each_with_index do |param, index|
         method['params_apply'] += ', ' if method['params_apply'] != ''
         method['params_apply'] += "(Ruby::ToCppType<#{param}>(param_#{index}))"
-        next
-        if param == 'std::string' or param == 'string'
-          method['params_apply'] += "(RubyToCpp::String(param_#{index}))"
-        elsif param == 'unsigned int'
-          method['params_apply'] += "(RubyToCpp::UnsignedInt(param_#{index}))"
-        elsif supported_types.include? param
-          method['params_apply'] += "(RubyToCpp::#{param.capitalize}(param_#{index}))"
-        else
-          method['params_apply'] += "(api_param<#{param}>(param_#{index}, \"#{param}\"))"
-        end
+        expected_ruby_type = param
+        expected_ruby_type = param[0...param.size - 1] if param =~ /\*$/
+        expected_ruby_type = 'Array' if param =~ /vector/
+        expected_ruby_type = 'Proc'  if param =~ /function/
+        method['params_check'] += "{ Ruby::Object tmp(param_#{index}); const std::string tmp_typename = (Ruby::ToCppType<std::string>(tmp.Apply(\"class\").Apply(\"name\")));
+  const std::string exc_message = \"Mismatched type in #{classname}::#{name}, argument ##{index + 1}. Excepting #{expected_ruby_type}, got \" + tmp_typename;
+
+  if (tmp_typename != \"#{expected_ruby_type}\")
+    rb_raise((Ruby::Constant(\"ArgumentError\").GetRubyInstance()), exc_message.c_str());
+}\n"
       end
     end
   end unless klass['methods'].nil?

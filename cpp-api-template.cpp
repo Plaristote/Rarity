@@ -42,6 +42,21 @@ namespace Ruby
   template<> unsigned int ToCppType<unsigned int>(VALUE value) { return (NUM2UINT(value)); }
   template<> long         ToCppType<long>(VALUE value)         { return (NUM2LONG(value)); }
   template<> double       ToCppType<double>(VALUE value)       { return (NUM2LONG(value)); }
+
+  template<> IRarityClass* ToRubyType<const char*>(const char*& str)
+  { return (new Ruby::Object(rb_str_new2(str))); }
+  template<> IRarityClass* ToRubyType<std::string>(std::string& str)
+  { return (new Ruby::Object(rb_str_new2(str.c_str()))); }
+  template<> IRarityClass* ToRubyType<unsigned int>(unsigned int& nbr)
+  { return (new Ruby::Object(UINT2NUM(nbr))); }
+  template<> IRarityClass* ToRubyType<int>(int& nbr)
+  { return (new Ruby::Object(INT2NUM(nbr))); }
+  template<> IRarityClass* ToRubyType<double>(double& dbl)
+  { return (new Ruby::Object(NUM2DBL(dbl))); }
+  template<> IRarityClass* ToRubyType<float>(float& nbr)
+  { return (new Ruby::Object(rb_float_new(nbr))); }
+  template<> IRarityClass* ToRubyType<bool>(bool& boolean)
+  { return (new Ruby::Object(boolean ? Qtrue : Qfalse)); }
 }
 
 template<typename T>
@@ -79,6 +94,8 @@ typedef VALUE (*RubyMethod)(...);
     {
       long                  _ptr  = get_instance_pointer(self);
       <%= classname %>*     _this = reinterpret_cast<<%= classname %>*>(_ptr);
+
+      <%= desc['params_check'] %>
       <% if desc['return'] == 'nil' || desc['return'] == 'void' %>
         _this-><%= method %>(<%= desc['params_apply'] %>);
         return (Qnil);

@@ -19,7 +19,11 @@ int main(void)
     lambda.Call<void, MyClass*>(&my_class);
 
     Ruby::PushIncludePath("./scripts");
-    Ruby::Require("test.rb");
+    if (!(Ruby::Require("test.rb")))
+    {
+      std::cout << "Could not require file" << std::endl;
+      return (-1);
+    }
 
     Ruby::Constant my_ruby_class("MyRubyClass");
     Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");

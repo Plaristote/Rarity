@@ -26,4 +26,4 @@ MyOtherClass:
       params:
         - MyClass*
     PrintName:
-      return: void
+      return: unsigned int

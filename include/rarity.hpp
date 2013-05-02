@@ -27,73 +27,6 @@ struct IRarityClass
 
 # include "rarity_object.hpp"
 
-class RarityType : public IRarityClass
-{
-  union Content
-  {
-    const char* string;
-    int         number;
-    float       floating_number;
-    bool        boolean;
-  };
-
-  enum ContentType
-  {
-    String, Number, FloatingNumber, Boolean
-  };
-
-public:
-  RarityType(const std::string& str)
-  {
-    content.string = str.c_str();
-    content_type   = String;
-  }
-
-  RarityType(const char* str)
-  {
-    content.string = str;
-    content_type   = String;
-  }
-
-  RarityType(int number)
-  {
-    content.number = number;
-    content_type   = Number;
-  }
-
-  RarityType(float floating_number)
-  {
-    content.floating_number = floating_number;
-    content_type            = FloatingNumber;
-  }
-
-  RarityType(bool boolean)
-  {
-    content.boolean = boolean;
-    content_type    = Boolean;
-  }
-
-  VALUE GetRubyInstance(void) const
-  {
-    switch (content_type)
-    {
-    case String:
-      return (rb_str_new2(content.string));
-    case Number:
-      return (INT2NUM(content.number));
-    case FloatingNumber:
-      return (NUM2DBL(content.floating_number));
-    case Boolean:
-      return (content.boolean ? Qtrue : Qfalse);
-    }
-    return (Qnil);
-  }
-
-private:
-  Content     content;
-  ContentType content_type;
-};
-
 #include <vector>
 #include <algorithm>
 
@@ -117,7 +50,8 @@ namespace Ruby
     template<typename TYPE>
     static IRarityClass* RubyType(TYPE type)
     {
-      return (new RarityType(type));
+      rb_raise(Ruby::Constant("ArgumentError").GetRubyInstance(), "unsupported return type");
+      return (0);
     }
   };
 
@@ -256,11 +190,17 @@ namespace Ruby
     template<typename TYPE>
     static TYPE CppType(VALUE value)
     {
-      VALUE pointer = rb_ivar_get(value, rb_intern("@rarity_cpp_pointer"));
+      if (value != Qnil)
+      {
+        VALUE pointer = rb_ivar_get(value, rb_intern("@rarity_cpp_pointer"));
 
-      if (pointer == Qnil)
-        throw true; // Nil Rarity Class
-      return (reinterpret_cast<TYPE>(NUM2LONG(pointer)));
+        if (pointer == Qnil)
+        {
+          rb_raise(Ruby::Constant("ArgumentError").GetRubyInstance(), "invalid rarity pointer: the C++ counterpart might have expired, or the type was not a proper Rarity object.");
+        }
+        return (reinterpret_cast<TYPE>(NUM2LONG(pointer)));
+      }
+      return (0);
     }
   };
 
@@ -270,7 +210,12 @@ namespace Ruby
     template<typename TYPE>
     static TYPE CppType(VALUE value)
     {
-      throw false; // Unhandled ruby type
+      Ruby::Object       object(value);
+      const std::string  rubyname = ToCppType<std::string>(object.Apply("class").Apply("name"));
+      const std::string  cppname  = typeid(TYPE).name();
+      const std::string  message  = "unhandled type conversion from [Ruby][" + rubyname + "] to [C++][" + cppname + ']';
+
+      rb_raise(Ruby::Constant("Exception").GetRubyInstance(), message.c_str());
     }
   };
 

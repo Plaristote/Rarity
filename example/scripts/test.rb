@@ -9,8 +9,9 @@ class MyRubyClass
     @my_class.print_array [ "Value1", "Value2", "Value3" ]
 
     tmp = MyOtherClass.new
-    tmp.print_name
-    tmp.set_my_class @my_class
+    nbr = tmp.print_name
+    puts "Unsigned int returned was -> #{nbr}"
+    tmp.set_my_class tmp
     tmp.print_name
   end
 
