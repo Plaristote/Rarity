@@ -12,7 +12,7 @@ By default, you need to go into your project's directory and execute the followi
       ruby $RARITY_PATH/rarity.rb
       
 This will create a rarity-bindings.cpp file in the current directory that you will need to link to your project.
-You will also have to add the include directory $RARITY_PATH/include and link with a ruby library.
+You will also have to add the include directory $RARITY_PATH/include and link with a Ruby library.
 
 You can also specify your own input directory and output file like this:
 
@@ -81,8 +81,8 @@ Let's write a Ruby script and C++ main function using our previous bindings:
 
     class MyRubyClass
       def initialize
-        puts "Initializing ruby class"
-        @my_class = MyClass.new "Name set from ruby"
+        puts "Initializing Ruby class"
+        @my_class = MyClass.new "Name set from Ruby"
       end
       
       def run my_class = nil
