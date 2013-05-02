@@ -25,25 +25,27 @@ C++ and Ruby must include this component. After including the component, our cod
     
 ./my_class.hpp
     
-     class MyClass : public RarityClass
-     {
-     public:
-       MyClass(const std::string& name) : RarityClass("MyClass"), name(name)
-       {}
-     
-       const std::string& GetName() const
-       {
-         return (name);
-       }
-       
-      void SetName(const std::string& str)
-      {
-        name = str;
-      }
+```C++
+class MyClass : public RarityClass
+{
+public:
+  MyClass(const std::string& name) : RarityClass("MyClass"), name(name)
+  {}
 
-     private:
-       std::string name;
-     };    
+  const std::string& GetName() const
+  {
+    return (name);
+  }
+  
+ void SetName(const std::string& str)
+ {
+   name = str;
+ }
+
+private:
+  std::string name;
+};    
+```
      
 Notice that your constructor needs to call RarityClass's constructor, which takes as parameter the name of the Ruby class
 that will be bound with this class.
@@ -53,19 +55,21 @@ For Rarity to generate the bindings, you will need to create a binding YAML file
 
 ./bindings-myclass.yml
 
-    MyClass:
-      include: 'myclass.hpp' # The path to the file including your class
-      methods:
-        initialize: # The 'initialize' method will call the C++ constructor.
-          params:
-            - std::string
-          return: void
-        GetName:
-          return: std::string
-        SetName:
-          params:
-            - std::string
-          return: void
+```YAML
+MyClass:
+  include: 'myclass.hpp' # The path to the file including your class
+  methods:
+    initialize: # The 'initialize' method will call the C++ constructor.
+      params:
+        - std::string
+      return: void
+    GetName:
+      return: std::string
+    SetName:
+      params:
+        - std::string
+      return: void
+```
 
 
 The Rarity script will recursively look for YAML files whose names start with 'bindings-', so your YAML file must begin
@@ -79,48 +83,52 @@ Let's write a Ruby script and C++ main function using our previous bindings:
 
 ./scripts/test.rb
 
-    class MyRubyClass
-      def initialize
-        puts "Initializing Ruby class"
-        @my_class = MyClass.new "Name set from Ruby"
-      end
-      
-      def run my_class = nil
-        my_class ||= @my_class
-        puts "[Ruby] #{my_class.get_name}"
-      end
-    end
+```Ruby
+class MyRubyClass
+  def initialize
+    puts "Initializing Ruby class"
+    @my_class = MyClass.new "Name set from Ruby"
+  end
+  
+  def run my_class = nil
+    my_class ||= @my_class
+    puts "[Ruby] #{my_class.get_name}"
+  end
+end
+```
 
 ./main.cpp
 
-    #include "rarity.hpp"
-    #include "myclass.hpp"
+```C++
+#include "rarity.hpp"
+#include "myclass.hpp"
+
+int main(void)
+{
+  RarityInitialize(); // Must be called before any construction of RarityClass instances
+  try
+  {
+    MyClass my_class("C++-created MyClass");
+  
+    Ruby::PushIncludePath("./scripts");
+    Ruby::Require("test.rb");
     
-    int main(void)
-    {
-      RarityInitialize(); // Must be called before any construction of RarityClass instances
-      try
-      {
-        MyClass my_class("C++-created MyClass");
-      
-        Ruby::PushIncludePath("./scripts");
-        Ruby::Require("test.rb");
-        
-        Ruby::Constant my_ruby_class("MyRubyClass");
-        Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");
+    Ruby::Constant my_ruby_class("MyRubyClass");
+    Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");
 
-        my_ruby_instance.Apply("run", 1, &my_class); // Method name, argument count, argument list of pointers to Rarity objects
-        my_ruby_instance.Apply("run"); // Call the same script method using the default parameter value
+    my_ruby_instance.Apply("run", 1, &my_class); // Method name, argument count, argument list of pointers to Rarity objects
+    my_ruby_instance.Apply("run"); // Call the same script method using the default parameter value
 
-      }
-      catch (const std::exception* e) // Ruby exceptions are converted to std::exception-compatible objects
-      {
-        std::cerr << "Caught exception " << e->what() << std::endl;
-      }
-      Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
-      RarityFinalize();
-      return (0);
-    }
+  }
+  catch (const std::exception* e) // Ruby exceptions are converted to std::exception-compatible objects
+  {
+    std::cerr << "Caught exception " << e->what() << std::endl;
+  }
+  Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
+  RarityFinalize();
+  return (0);
+}
+```
     
 And that's it. We've seen pretty much everything Rarity offers.
 
