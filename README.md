@@ -20,31 +20,10 @@ You can also specify your own input directory and output file like this:
 
 How to generate bindings for a class ?
 ===
-The Rarity script will recursively look for binding yml files describing C++ classes to bind with Ruby.
-Let's say you have a C++ class to export, this one for instance:
-
-     class MyClass
-     {
-     public:
-       MyClass(const std::string& name) : name(name)
-       {}
-     
-       const std::string& GetName() const
-       {
-         return (name);
-       }
-       
-      void SetName(const std::string& str)
-      {
-        name = str;
-      }
-
-     private:
-       std::string name;
-     };
-     
-The first thing to do is to add a component to the class using inheritence. Any class that need to be used from both
+The first thing to do is to add a component called 'RarityClass' to the class using inheritence. Any class that need to be used from both
 C++ and Ruby must include this component. After including the component, our code will look like this:
+    
+./my_class.hpp
     
      class MyClass : public RarityClass
      {
@@ -66,11 +45,13 @@ C++ and Ruby must include this component. After including the component, our cod
        std::string name;
      };    
      
-Notice that your constructor need to call RarityClass' constructor, which take as parameter the name of the Ruby class
+Notice that your constructor need to call RarityClass' constructor, which takes as parameter the name of the Ruby class
 that will be bound with this class.
 
 Now to the actual binding part.
 For Rarity to generate the bindings, you will need to create a binding YML file that will look like this:
+
+./bindings-myclass.yml
 
     MyClass:
       include: 'myclass.hpp' # The path to the file including your class
