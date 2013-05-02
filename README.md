@@ -136,6 +136,23 @@ the Ruby bindings will use snake case (this means that in our previous example, 
     MyClass#get_name
     MyClass#set_name
 
+Natively supported types
+============
+The generated bindings will support the type you described (at least as pointers). Moreover, the native following
+types can be converted from one side to the other (or both).
+
+    <-  = Ruby to C++ conversion supported
+    ->  = C++ to Ruby conversion supported
+    <-> = Ruby to C++ and C++ to Ruby conversions supported
+    
+    std::string   <-> String
+    unsigned int  <-> Fixnum
+    int           <-> Fixnum
+    float         <-> Float
+    std::function <-  Proc
+    std::vector   <-> Array
+    Ruby::Object  <-> Any ruby object
+
 Initialize
 ============
 It is possible not to expose any constructor to Ruby, in which case it will be impossible from Ruby scripts to
