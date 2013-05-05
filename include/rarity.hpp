@@ -270,28 +270,56 @@ namespace Ruby
   }
 }
 
+#include <iostream>
+struct Rarity
+{
+private:
+  static VALUE WrappedProtect(VALUE value)
+  {
+    std::function<void (void)>* functor = reinterpret_cast<std::function<void (void)>*>(value);
+
+    (*functor)();
+    return (Qnil);
+  }
+public:
+  static void Protect(std::function<void (void)> block)
+  {
+    int state = 0;
+
+    //rb_protect(WrappedApply, reinterpret_cast<VALUE>(this), &state);
+    rb_protect(Rarity::WrappedProtect, reinterpret_cast<VALUE>(&block), &state);
+    if (state != 0)
+      throw new Ruby::Exception();
+  }
+  
+  static VALUE wrapping_module;
+};
 
 class RarityClass : public IRarityClass
 {
 public:
   RarityClass(const std::string& classname)
   {
-    name_symbol    = rb_intern(classname.c_str());
-    ruby_class     = rb_const_get(rb_cObject, name_symbol);
+    Rarity::Protect([this, classname]()
     {
-      rb_define_alias(ruby_class, "_real_initialize", "initialize");
-      rb_define_alias(ruby_class, "initialize", "_initialize");
+      name_symbol    = rb_intern(classname.c_str());
+      ruby_class     = rb_const_get(Rarity::wrapping_module, name_symbol);
+      if (ruby_class != Qnil)
+      {
+        rb_define_alias(ruby_class, "_real_initialize", "initialize");
+        rb_define_alias(ruby_class, "initialize", "_initialize");
 
-      ruby_instance  = rb_class_new_instance(0, 0, ruby_class);
-      pointer_symbol = rb_intern("@rarity_cpp_pointer");
+        ruby_instance  = rb_class_new_instance(0, 0, ruby_class);
+        pointer_symbol = rb_intern("@rarity_cpp_pointer");
 
-      rb_define_alias(ruby_class, "initialize", "_real_initialize");
+        rb_define_alias(ruby_class, "initialize", "_real_initialize");
 
-      SetRubyInstance(ruby_instance);
-      VALUE ruby_ptr = rb_ivar_get(ruby_instance, pointer_symbol);
-      if (NUM2LONG(ruby_ptr) != (long)this)
-        std::cout << "MY PRIMARY FUNCTION IS FAILURE" << std::endl;
-    }
+        SetRubyInstance(ruby_instance);
+        VALUE ruby_ptr = rb_ivar_get(ruby_instance, pointer_symbol);
+        if (NUM2LONG(ruby_ptr) != (long)this)
+          std::cout << "MY PRIMARY FUNCTION IS FAILURE" << std::endl;
+      }
+    });
   }
 
   ~RarityClass(void)

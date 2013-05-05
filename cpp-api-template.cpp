@@ -6,6 +6,8 @@
 
 using namespace std;
 
+VALUE Rarity::wrapping_module;
+
 static VALUE get_class_by_name(const std::string& classname)
 {
   VALUE arg_classname = rb_str_new2(classname.c_str());
@@ -90,7 +92,7 @@ typedef VALUE (*RubyMethod)(...);
 
       return (Qnil);
     }<% else %>
-    VALUE binding_<%= classname %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
+    VALUE binding_<%= classname %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
       long                  _ptr  = get_instance_pointer(self);
       <%= classname %>*     _this = reinterpret_cast<<%= classname %>*>(_ptr);
@@ -116,12 +118,16 @@ void Initialize_<%= classname %>()
   <% else %>
     rb_cObject;
   <% end %>
+  <% if options[:mod].nil? %>
   VALUE klass = rb_define_class("<%= classname %>", inherits);
+  <% else %>
+  VALUE klass = rb_define_class_under(Rarity::wrapping_module, "<%= classname %>", inherits);
+  <% end %>
 
   rb_define_method(klass, "_initialize", reinterpret_cast<RubyMethod>(binding_<%= classname %>__initialize), 0);
   rb_define_module_function(klass, "finalize", reinterpret_cast<RubyMethod>(RarityClassFinalize), 1);
   <% struct['methods'].each do |method, desc| %>
-  rb_define_method(klass, "<%= method.underscore %>", reinterpret_cast<RubyMethod>(binding_<%= classname %>_<%= method %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
+  rb_define_method(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= classname %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
   <% end unless struct['methods'].nil? %>
 }
 <% end %>
@@ -129,6 +135,11 @@ void Initialize_<%= classname %>()
 void RarityInitialize(void)
 {
   ruby_init();
+  <% unless options[:mod].nil? %>
+  Rarity::wrapping_module = rb_define_module("<%= options[:module] %>");
+  <% else %>
+  Rarity::wrapping_module = rb_cObject;
+  <% end %>
   <% classes.each do |classname, struct| %>
   Initialize_<%= classname %>();<% end %>
 }

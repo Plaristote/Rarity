@@ -15,6 +15,10 @@ MyClass:
       params:
         - std::vector<std::string>
       return: void
+    operator[]:
+      params:
+        - int
+      return: int
 
 MyOtherClass:
   include: 'myclass.hpp'

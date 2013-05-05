@@ -20,6 +20,11 @@
      return (name);
    }
 
+   int operator[](int i)
+   {
+     return (i + name.size());
+   }
+
   void SetName(const std::string& str)
   {
     name = str;
