@@ -12,6 +12,7 @@ MyClass:
         - std::string
       return: void
     PrintArray:
+      static: true
       params:
         - std::vector<std::string>
       return: void

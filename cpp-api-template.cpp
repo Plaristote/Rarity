@@ -91,6 +91,16 @@ typedef VALUE (*RubyMethod)(...);
       os.Apply("define_finalizer", 2, instance, &proc);
 
       return (Qnil);
+    }<% elsif desc['static'] == true %>
+    VALUE binding_<%= classname %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
+    {
+      <% if desc['return'] == 'nil' || desc['return'] == 'void' %>
+        <%= classname %>::<%= method %>(<%= desc['params_apply'] %>);
+        return (Qnil);
+      <% else %>
+        <%= desc['return'] %> ret = <%= classname %>::<%= method %>(<%= desc['params_apply'] %>);
+        return (<%= CppHelpers._return 'ret', desc['return'] %>);
+      <% end %>
     }<% else %>
     VALUE binding_<%= classname %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
@@ -126,8 +136,8 @@ void Initialize_<%= classname %>()
 
   rb_define_method(klass, "_initialize", reinterpret_cast<RubyMethod>(binding_<%= classname %>__initialize), 0);
   rb_define_module_function(klass, "finalize", reinterpret_cast<RubyMethod>(RarityClassFinalize), 1);
-  <% struct['methods'].each do |method, desc| %>
-  rb_define_method(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= classname %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
+  <% struct['methods'].each do |method, desc| %> <% definer = if desc['static'] != true then 'rb_define_method' else 'rb_define_module_function' end %>
+  <%= definer %>(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= classname %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
   <% end unless struct['methods'].nil? %>
 }
 <% end %>

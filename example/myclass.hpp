@@ -1,13 +1,14 @@
 #ifndef  MY_CLASS_HPP
 # define MY_CLASS_HPP
 
-# include "rarity.hpp"
+# define  RARITY_RUBY
+# include "rarity_scripting.hpp"
 # include <string>
 
- class MyClass : public RarityClass
+ class MyClass : ScriptBindings
  {
  public:
-   MyClass(const std::string& name) : RarityClass("MyClass"), name(name)
+   MyClass(const std::string& name) : script_bindings("MyClass"), name(name)
    {
      std::cout << "Initializing the class in C++" << std::endl;
      Ruby::Object self(*this);
@@ -30,9 +31,9 @@
     name = str;
   }
 
-  void PrintArray(const std::vector<std::string>& array)
+  static void PrintArray(const std::vector<std::string>& array)
   {
-    std::cout << name << " printing array" << std::endl;
+    std::cout << "MyClass Static Method" << std::endl;
     std::for_each(array.begin(), array.end(), [](std::string value)
     {
       std::cout << "- " << value << std::endl;
@@ -43,10 +44,10 @@
    std::string name;
  };
 
- class MyOtherClass : public RarityClass
+ class MyOtherClass : ScriptBindings
  {
  public:
-   MyOtherClass(void) : RarityClass("MyOtherClass")
+   MyOtherClass(void) : script_bindings("MyOtherClass")
    {
      my_class = 0;
    }
