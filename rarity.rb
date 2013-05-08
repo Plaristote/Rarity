@@ -48,6 +48,13 @@ includes      = []
 
 supported_types = [ 'bool', 'float', 'int', 'unsigned int', 'long', 'double' ]
 
+##
+## TODO Implement Template support
+##
+classes.each do |classname, klass|
+  next if klass['template'].nil?
+end
+
 classes.each do |classname, klass|
   includes << klass['include']
   operator_overload_count      = 0
@@ -73,9 +80,14 @@ classes.each do |classname, klass|
 
       method['params'].each_with_index do |param, index|
         method['params_apply'] += ', ' if method['params_apply'] != ''
-        method['params_apply'] += "(Ruby::ToCppType<#{param}>(param_#{index}))"
+        if param == 'const char*'
+          method['params_apply'] += "(Ruby::ToCppType<std::string>(param_#{index})).c_str()"
+        else
+          method['params_apply'] += "(Ruby::ToCppType<#{param}>(param_#{index}))"
+        end
         expected_ruby_type = param
         expected_ruby_type = param[0...param.size - 1] if param =~ /\*$/
+        expected_ruby_type = 'String' if param == 'const char*'
         expected_ruby_type = 'Fixnum' if [ 'int', 'unsigned int', 'short', 'unsigned short' ].include? param
         expected_ruby_type = 'Float'  if [ 'double', 'float' ].include? param
         expected_ruby_type = 'Bignum' if param == 'long'

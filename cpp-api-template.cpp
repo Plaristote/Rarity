@@ -22,7 +22,8 @@ static long get_instance_pointer(VALUE self)
 {
   VALUE variable = rb_ivar_get(self, rb_intern("@rarity_cpp_pointer"));
 
-  // throw something if variable is nil
+  if (variable == Qnil)
+    rb_raise(Ruby::Constant("ArgumentError"), "The current Rarity object you\'re trying to use is not uninitialized or has expired.");
   return (NUM2LONG(variable));
 }
 
@@ -146,7 +147,7 @@ void RarityInitialize(void)
 {
   ruby_init();
   <% unless options[:mod].nil? %>
-  Rarity::wrapping_module = rb_define_module("<%= options[:module] %>");
+  Rarity::wrapping_module = rb_define_module("<%= options[:mod] %>");
   <% else %>
   Rarity::wrapping_module = rb_cObject;
   <% end %>

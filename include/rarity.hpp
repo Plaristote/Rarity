@@ -332,10 +332,11 @@ public:
     return (rb_funcall2(ruby_instance, rb_intern("class"), 0, 0));
   }
 
-  VALUE GetRubyInstance(void) const { return (ruby_instance); }
+  VALUE GetRubyInstance(void) const { std::cout << "lol wat" << std::endl; return (ruby_instance); }
 
   void  SetRubyInstance(VALUE val)
   {
+    std::cout << "oh FUCK" << std::endl;
     ruby_instance = val;
     rb_ivar_set(ruby_instance, pointer_symbol, INT2FIX((long)this));
   }
@@ -345,7 +346,7 @@ public:
     return (ruby_instance);
   }
 
-private:
+//private:
   ID        pointer_symbol;
   ID        name_symbol;
   VALUE     ruby_instance;
