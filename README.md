@@ -51,6 +51,11 @@ public:
  {
    name = str;
  }
+ 
+ static void ClassMethod(void)
+ {
+   std::cout << "Executing Class Method" << std::endl;
+ }
 
 private:
   std::string name;
@@ -79,8 +84,10 @@ MyClass:
       params:
         - std::string
       return: void
+    ClassMethod:
+      static: true # If the method uses the static qualifier, you must set this flag to true.
+      return: void
 ```
-
 
 The Rarity script will recursively look for YAML files whose names start with 'bindings-', so your YAML file must begin
 with those characters (e.g.: bindings-myclass.yml).
@@ -103,6 +110,10 @@ class MyRubyClass
   def run my_class = nil
     my_class ||= @my_class
     puts "[Ruby] #{my_class.get_name}"
+  end
+  
+  def run_class_member
+    MyClass.class_method
   end
 end
 ```
@@ -153,6 +164,8 @@ the Ruby bindings will use snake case (this means that in our previous example, 
     MyClass#initialize
     MyClass#get_name
     MyClass#set_name
+
+It is possible to override this behavior by setting an attribute 'alias' in the method's description.
 
 Natively supported types
 ============
