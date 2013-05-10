@@ -58,6 +58,12 @@ end
 classes.each do |classname, klass|
   includes << klass['include']
   operator_overload_count      = 0
+  if klass['alias'].nil?
+    parts = classname.split '::'
+    klass['belongs_to'] = parts[0...parts.size - 1].join '::' unless parts.size == 1
+    klass['alias']      = parts.last
+  end
+  klass['binding-symbol']      = (classname.gsub '::', '__').gsub /[<>,]/n, '___'
   klass['methods'].each do |name, method|
     method['name']             = method['alias']
     method['name']           ||= name

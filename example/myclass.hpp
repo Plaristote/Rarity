@@ -8,6 +8,14 @@
  class MyClass : ScriptBindings
  {
  public:
+   struct Some
+   {
+     static void Thing()
+     {
+       std::cout << "Called Some::Thing" << std::endl;
+     }
+   };
+
    MyClass(const std::string& name) : script_bindings("MyClass"), name(name)
    {
      std::cout << "Initializing the class in C++" << std::endl;

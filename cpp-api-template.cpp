@@ -8,16 +8,6 @@ using namespace std;
 
 VALUE Rarity::wrapping_module;
 
-static VALUE get_class_by_name(const std::string& classname)
-{
-  VALUE arg_classname = rb_str_new2(classname.c_str());
-
-  return (rb_funcall2(rb_cObject,
-                      rb_intern("const_get"),
-                      1,
-                      &arg_classname));
-}
-
 static long get_instance_pointer(VALUE self)
 {
   VALUE variable = rb_ivar_get(self, rb_intern("@rarity_cpp_pointer"));
@@ -79,7 +69,7 @@ typedef VALUE (*RubyMethod)(...);
 
   <% struct['methods'].each do |method, desc| %>
     <% if method == 'initialize' %><% has_constructor = true %>
-    VALUE binding_<%= classname %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
+    VALUE binding_<%= struct['binding-symbol'] %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
     {
       Ruby::Constant    os("ObjectSpace");
       std::stringstream stream;
@@ -93,7 +83,7 @@ typedef VALUE (*RubyMethod)(...);
 
       return (Qnil);
     }<% elsif desc['static'] == true %>
-    VALUE binding_<%= classname %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
+    VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
       <% if desc['return'] == 'nil' || desc['return'] == 'void' %>
         <%= classname %>::<%= method %>(<%= desc['params_apply'] %>);
@@ -103,7 +93,7 @@ typedef VALUE (*RubyMethod)(...);
         return (<%= CppHelpers._return 'ret', desc['return'] %>);
       <% end %>
     }<% else %>
-    VALUE binding_<%= classname %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
+    VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
       long                  _ptr  = get_instance_pointer(self);
       <%= classname %>*     _this = reinterpret_cast<<%= classname %>*>(_ptr);
@@ -120,25 +110,18 @@ typedef VALUE (*RubyMethod)(...);
     <% end %>
   <% end unless struct['methods'].nil? %>
 
-  VALUE binding_<%= classname %>__initialize(VALUE) { return (Qnil); }
+  VALUE binding_<%= struct['binding-symbol'] %>__initialize(VALUE) { return (Qnil); }
 
-void Initialize_<%= classname %>()
+void Initialize_<%= struct['binding-symbol'] %>()
 {
-  VALUE inherits = <% unless struct['inherits'].nil? %>
-    get_class_by_name("<%= struct['inherits'] %>");
-  <% else %>
-    rb_cObject;
-  <% end %>
-  <% if options[:mod].nil? %>
-  VALUE klass = rb_define_class("<%= classname %>", inherits);
-  <% else %>
-  VALUE klass = rb_define_class_under(Rarity::wrapping_module, "<%= classname %>", inherits);
-  <% end %>
+  VALUE inherits = <% unless struct['inherits'].nil? %> Ruby::SolveSymbol("<%= struct['inherits'] %>"); <% else %> rb_cObject; <% end %>
+  VALUE wrapped  = <% if struct['belongs_to'].nil? %> Rarity::wrapping_module; <% else %> Ruby::SolveSymbol("<%= struct['belongs_to'] %>"); <% end %>
+  VALUE klass    = rb_define_class_under(wrapped, "<%= struct['alias'] %>", inherits);
 
-  rb_define_method(klass, "_initialize", reinterpret_cast<RubyMethod>(binding_<%= classname %>__initialize), 0);
+  rb_define_method(klass, "_initialize", reinterpret_cast<RubyMethod>(binding_<%= struct['binding-symbol'] %>__initialize), 0);
   rb_define_module_function(klass, "finalize", reinterpret_cast<RubyMethod>(RarityClassFinalize), 1);
   <% struct['methods'].each do |method, desc| %> <% definer = if desc['static'] != true then 'rb_define_method' else 'rb_define_module_function' end %>
-  <%= definer %>(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= classname %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
+  <%= definer %>(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
   <% end unless struct['methods'].nil? %>
 }
 <% end %>
@@ -152,7 +135,7 @@ void RarityInitialize(void)
   Rarity::wrapping_module = rb_cObject;
   <% end %>
   <% classes.each do |classname, struct| %>
-  Initialize_<%= classname %>();<% end %>
+  Initialize_<%= struct['binding-symbol'] %>();<% end %>
 }
 
 void RarityFinalize(void)
@@ -248,6 +231,32 @@ namespace Ruby
   IRarityClass* ToRubyType<IRarityClass*>(IRarityClass*& type)
   {
     return (new Object(type->GetRubyInstance()));
+  }
+
+  VALUE SolveSymbol(const std::string& temp)
+  {
+    std::string              symbol   = temp;
+    std::vector<std::string> parts;
+    VALUE                    constant = Rarity::wrapping_module;
+    unsigned int             i        = 0;
+
+    for (i = 0 ; i < symbol.size() ; ++i)
+    {
+      if (symbol[i] == ':' && symbol[i + 1] == ':')
+      {
+        parts.push_back(symbol.substr(0, i));
+        symbol.erase(0, i + 1);
+        i = 0;
+      }
+    }
+    parts.push_back(symbol.substr(0, i));
+    for (i = 0 ; i < parts.size() ; ++i)
+    {
+      constant = Ruby::Constant(parts[i], constant);
+      if (constant == Qnil)
+        return (Qnil);
+    }
+    return (constant);
   }
 }
 

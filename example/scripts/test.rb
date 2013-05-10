@@ -1,20 +1,12 @@
-class MyClass
-  attr_accessor :rarity_cpp_pointer
-end
-
 class MyRubyClass
   def initialize
     puts "Initalizing ruby class"
-    @my_class = MyClass.new "Name set from ruby"
-    MyClass.print_array [ "Value1", "Value2", "Value3" ]
+    @my_class = ::Boots::MyClass.new "Name set from ruby"
+    Boots::MyClass.print_array [ "Value1", "Value2", "Value3" ]
 
     puts "Operator overload test: #{@my_class.[](5)} (#{@my_class.get_name.size})"
 
-    tmp = MyOtherClass.new
-    nbr = tmp.print_name
-    puts "Unsigned int returned was -> #{nbr}"
-    tmp.set_my_class tmp
-    tmp.print_name
+    Boots::MyClass::Some.thing
   end
 
   def run my_class = nil

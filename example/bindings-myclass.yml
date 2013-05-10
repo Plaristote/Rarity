@@ -21,14 +21,9 @@ MyClass:
         - int
       return: int
 
-MyOtherClass:
+'MyClass::Some':
   include: 'myclass.hpp'
   methods:
-    initialize:
+    Thing:
+      static: true
       return: void
-    SetMyClass:
-      return: void
-      params:
-        - MyClass*
-    PrintName:
-      return: unsigned int

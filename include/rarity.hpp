@@ -34,11 +34,34 @@ class RarityClass;
 
 namespace Ruby
 {
+  VALUE SolveSymbol(const std::string&);
+
   template<bool>
   struct HandleRarityClass
   {
+    template<typename TPL_TYPE>
+    static IRarityClass* RubyType(TPL_TYPE& type)
+    {
+      std::cout << ">>> Lol wut" << std::endl;
+      std::cout << &type.ruby_instance << std::endl;
+      Ruby::Object type_class(type.GetRubyType());
+      std::cout << ">>> Lol wut" << std::endl;
+      Ruby::Object self(type.ruby_instance);
+      std::cout << ">>> Lol wut" << std::endl;
+
+      std::cout << ">>>>>>>>>> DEBUG 1" << std::endl;
+      TPL_TYPE* rarity_heap = new TPL_TYPE(type);
+
+      rarity_heap->Initialize();
+      std::cout << ">>>>>>>>>> DEBUG 2" << std::endl;
+
+      Ruby::Object dup = type_class.Apply("rarity_copy", 1, &type);
+
+      return (new Ruby::Object(dup.GetRubyInstance()));
+    }
+
     template<typename TYPE>
-    static IRarityClass* RubyType(TYPE type)
+    static IRarityClass* RubyType(TYPE* type)
     {
       return (new Ruby::Object(type->GetRubyInstance()));
     }
@@ -59,12 +82,12 @@ namespace Ruby
   struct IsBaseOf : public std::is_base_of<A, B> {};
 
   template<typename A, typename B>
-  struct IsBaseOf<A*, B*> : public std::is_base_of<A, B> {};
+  struct IsBaseOf<A, B*> : public std::is_base_of<A, B> {};
 
   template<typename TYPE>
   IRarityClass* ToRubyType(TYPE& type)
   {
-    return (HandleRarityClass<IsBaseOf<RarityClass*, TYPE>::value>::template RubyType(type));
+    return (HandleRarityClass<IsBaseOf<RarityClass, TYPE>::value>::template RubyType(type));
   }
 
   template<typename TYPE>
@@ -281,12 +304,12 @@ private:
     (*functor)();
     return (Qnil);
   }
+
 public:
   static void Protect(std::function<void (void)> block)
   {
     int state = 0;
 
-    //rb_protect(WrappedApply, reinterpret_cast<VALUE>(this), &state);
     rb_protect(Rarity::WrappedProtect, reinterpret_cast<VALUE>(&block), &state);
     if (state != 0)
       throw new Ruby::Exception();
@@ -298,12 +321,19 @@ public:
 class RarityClass : public IRarityClass
 {
 public:
-  RarityClass(const std::string& classname)
+  RarityClass(const std::string& classname) : ruby_cpp_name(classname)
   {
-    Rarity::Protect([this, classname]()
+    Initialize();
+  }
+
+  void Initialize()
+  {
+    rb_gc_register_address(&ruby_instance);
+    Rarity::Protect([this]()
     {
-      name_symbol    = rb_intern(classname.c_str());
-      ruby_class     = rb_const_get(Rarity::wrapping_module, name_symbol);
+    //name_symbol    = rb_intern(ruby_cpp_name.c_str());
+    //ruby_class     = rb_const_get(Rarity::wrapping_module, name_symbol);
+      ruby_class     = Ruby::SolveSymbol(ruby_cpp_name);
       if (ruby_class != Qnil)
       {
         rb_define_alias(ruby_class, "_real_initialize", "initialize");
@@ -315,9 +345,6 @@ public:
         rb_define_alias(ruby_class, "initialize", "_real_initialize");
 
         SetRubyInstance(ruby_instance);
-        VALUE ruby_ptr = rb_ivar_get(ruby_instance, pointer_symbol);
-        if (NUM2LONG(ruby_ptr) != (long)this)
-          std::cout << "MY PRIMARY FUNCTION IS FAILURE" << std::endl;
       }
     });
   }
@@ -325,6 +352,7 @@ public:
   ~RarityClass(void)
   {
     rb_ivar_set(ruby_instance, pointer_symbol, Qnil);
+    rb_gc_unregister_address(&ruby_instance);
   }
 
   VALUE GetRubyType(void) const
@@ -332,11 +360,10 @@ public:
     return (rb_funcall2(ruby_instance, rb_intern("class"), 0, 0));
   }
 
-  VALUE GetRubyInstance(void) const { std::cout << "lol wat" << std::endl; return (ruby_instance); }
+  VALUE GetRubyInstance(void) const { return (ruby_instance); }
 
   void  SetRubyInstance(VALUE val)
   {
-    std::cout << "oh FUCK" << std::endl;
     ruby_instance = val;
     rb_ivar_set(ruby_instance, pointer_symbol, INT2FIX((long)this));
   }
@@ -347,10 +374,11 @@ public:
   }
 
 //private:
-  ID        pointer_symbol;
-  ID        name_symbol;
-  VALUE     ruby_instance;
-  VALUE     ruby_class;
+  const std::string ruby_cpp_name;
+  ID                pointer_symbol;
+  ID                name_symbol;
+  VALUE             ruby_instance;
+  VALUE             ruby_class;
 };
 
 #endif
