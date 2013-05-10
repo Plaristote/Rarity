@@ -10,7 +10,6 @@ Current weaknesses
 Rarity is still in develpment. Here are a list of the known weaknesses, and what I intend to do to fix them:
 - It is not possible to pass or return by copy when manipulating insances of RarityClasses (that is, the objects that have generated ruby bindings).
 This will be fixed by allocating a new instance of the RarityClass in the heap and copy the stack insance in it. The duplcated instance will be garbage collected by Ruby.
-- It is not possible to bind classes embedded in other classes. It requires a little bit more code to be able to properly solve the Ruby symbol.
 
 Usage
 ===
