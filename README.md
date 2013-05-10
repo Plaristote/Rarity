@@ -5,11 +5,8 @@ Code generator for binding C++ APIs to Ruby with no sweat.
 Rarity consists of a few header files you will need to include in your project and a script that will generate
 your bindings by checking out a YAML file containing your bindings description.
 
-Current weaknesses
-===
-Rarity is still in develpment. Here are a list of the known weaknesses, and what I intend to do to fix them:
-- It is not possible to pass or return by copy when manipulating insances of RarityClasses (that is, the objects that have generated ruby bindings).
-This will be fixed by allocating a new instance of the RarityClass in the heap and copy the stack insance in it. The duplcated instance will be garbage collected by Ruby.
+Warning: this software hasn't been nearly tested enough to be declared stable. It is not recommended for production use.
+You are very much encouraged to participate the testing effort by sending feedback and bug reports.
 
 Usage
 ===
