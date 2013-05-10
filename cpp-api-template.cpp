@@ -50,6 +50,8 @@ namespace Ruby
   { return (new Ruby::Object(rb_float_new(nbr))); }
   template<> IRarityClass* ToRubyType<bool>(bool& boolean)
   { return (new Ruby::Object(boolean ? Qtrue : Qfalse)); }
+  template<> IRarityClass* ToRubyType<Ruby::Object>(Ruby::Object& object)
+  { return (new Ruby::Object(object)); }
 }
 
 template<typename T>

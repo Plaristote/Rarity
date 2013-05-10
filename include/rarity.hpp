@@ -29,6 +29,7 @@ struct IRarityClass
 
 #include <vector>
 #include <algorithm>
+#include <sstream>
 
 class RarityClass;
 
@@ -42,22 +43,19 @@ namespace Ruby
     template<typename TPL_TYPE>
     static IRarityClass* RubyType(TPL_TYPE& type)
     {
-      std::cout << ">>> Lol wut" << std::endl;
-      std::cout << &type.ruby_instance << std::endl;
-      Ruby::Object type_class(type.GetRubyType());
-      std::cout << ">>> Lol wut" << std::endl;
-      Ruby::Object self(type.ruby_instance);
-      std::cout << ">>> Lol wut" << std::endl;
-
-      std::cout << ">>>>>>>>>> DEBUG 1" << std::endl;
       TPL_TYPE* rarity_heap = new TPL_TYPE(type);
 
       rarity_heap->Initialize();
-      std::cout << ">>>>>>>>>> DEBUG 2" << std::endl;
+      {
+        std::stringstream stream;
+        Ruby::Constant    os("ObjectSpace");
+        Ruby::Object      proc;
 
-      Ruby::Object dup = type_class.Apply("rarity_copy", 1, &type);
-
-      return (new Ruby::Object(dup.GetRubyInstance()));
+        stream << (long)rarity_heap;
+        proc = Ruby::Evaluate("Proc.new do (" + rarity_heap->GetRubySymbol() + ".finalize " + stream.str() + ") end");
+        os.Apply("define_finalizer", 2, rarity_heap, &proc);
+      }
+      return (new Ruby::Object(rarity_heap->GetRubyInstance()));
     }
 
     template<typename TYPE>
@@ -366,6 +364,11 @@ public:
   {
     ruby_instance = val;
     rb_ivar_set(ruby_instance, pointer_symbol, INT2FIX((long)this));
+  }
+
+  const std::string& GetRubySymbol(void) const
+  {
+    return (ruby_cpp_name);
   }
 
   operator VALUE() const
