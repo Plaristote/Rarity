@@ -10,7 +10,6 @@ Current weaknesses
 Rarity is still in develpment. Here are a list of the known weaknesses, and what I intend to do to fix them:
 - It is not possible to pass or return by copy when manipulating insances of RarityClasses (that is, the objects that have generated ruby bindings).
 This will be fixed by allocating a new instance of the RarityClass in the heap and copy the stack insance in it. The duplcated instance will be garbage collected by Ruby.
-- It is not possible to bind classes embedded in other classes. It requires a little bit more code to be able to properly solve the Ruby symbol.
 
 Usage
 ===
@@ -24,6 +23,10 @@ You will also have to add the include directory $RARITY_PATH/include and link wi
 You can also specify your own input directory and output file like this:
 
       ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp
+
+There's also a third option that allows you to create a Ruby module that will wrap all the bindings:
+
+      ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp --module MyRubyBindings
 
 How to generate bindings for a class ?
 ===
@@ -47,6 +50,11 @@ public:
  void SetName(const std::string& str)
  {
    name = str;
+ }
+ 
+ static void ClassMethod(void)
+ {
+   std::cout << "Executing Class Method" << std::endl;
  }
 
 private:
@@ -76,8 +84,10 @@ MyClass:
       params:
         - std::string
       return: void
+    ClassMethod:
+      static: true # If the method uses the static qualifier, you must set this flag to true.
+      return: void
 ```
-
 
 The Rarity script will recursively look for YAML files whose names start with 'bindings-', so your YAML file must begin
 with those characters (e.g.: bindings-myclass.yml).
@@ -100,6 +110,10 @@ class MyRubyClass
   def run my_class = nil
     my_class ||= @my_class
     puts "[Ruby] #{my_class.get_name}"
+  end
+  
+  def run_class_member
+    MyClass.class_method
   end
 end
 ```
@@ -150,6 +164,8 @@ the Ruby bindings will use snake case (this means that in our previous example, 
     MyClass#initialize
     MyClass#get_name
     MyClass#set_name
+
+It is possible to override this behavior by setting an attribute 'alias' in the method's description.
 
 Natively supported types
 ============
