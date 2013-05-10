@@ -24,6 +24,10 @@ You can also specify your own input directory and output file like this:
 
       ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp
 
+There's also a third option that allows you to create a Ruby module that will wrap all the bindings:
+
+      ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp --module MyRubyBindings
+
 How to generate bindings for a class ?
 ===
 The first thing to do is to add a component called 'RarityClass' to the class using inheritence. Any class that needs to be used from both
