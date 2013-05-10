@@ -30,6 +30,11 @@ namespace Ruby
 
     operator VALUE() const { return (instance); }
 
+    Object operator[](Object object)
+    {
+      return (Apply(Symbol("[]"), 1, &object));
+    }
+
   protected:
     VALUE instance;
 

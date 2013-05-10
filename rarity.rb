@@ -58,11 +58,10 @@ end
 classes.each do |classname, klass|
   includes << klass['include']
   operator_overload_count      = 0
-  if klass['alias'].nil?
-    parts = classname.split '::'
-    klass['belongs_to'] = parts[0...parts.size - 1].join '::' unless parts.size == 1
-    klass['alias']      = parts.last
-  end
+  klass['alias'] = classname if klass['alias'].nil?
+  parts = klass['alias'].split '::'
+  klass['belongs_to'] = parts[0...parts.size - 1].join '::' unless parts.size == 1
+  klass['alias']      = parts.last
   klass['binding-symbol']      = (classname.gsub '::', '__').gsub /[<>,]/n, '___'
   klass['methods'].each do |name, method|
     method['name']             = method['alias']
@@ -93,7 +92,7 @@ classes.each do |classname, klass|
         end
         expected_ruby_type = param
         expected_ruby_type = param[0...param.size - 1] if param =~ /\*$/
-        expected_ruby_type = 'String' if param == 'const char*'
+        expected_ruby_type = 'String' if param == 'const char*' or param == 'std::string' or param == 'string'
         expected_ruby_type = 'Fixnum' if [ 'int', 'unsigned int', 'short', 'unsigned short' ].include? param
         expected_ruby_type = 'Float'  if [ 'double', 'float' ].include? param
         expected_ruby_type = 'Bignum' if param == 'long'

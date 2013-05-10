@@ -71,7 +71,7 @@ typedef VALUE (*RubyMethod)(...);
 
   <% struct['methods'].each do |method, desc| %>
     <% if method == 'initialize' %><% has_constructor = true %>
-    VALUE binding_<%= struct['binding-symbol'] %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
+    static VALUE binding_<%= struct['binding-symbol'] %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
     {
       Ruby::Constant    os("ObjectSpace");
       std::stringstream stream;
@@ -85,7 +85,7 @@ typedef VALUE (*RubyMethod)(...);
 
       return (Qnil);
     }<% elsif desc['static'] == true %>
-    VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
+    static VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
       <% if desc['return'] == 'nil' || desc['return'] == 'void' %>
         <%= classname %>::<%= method %>(<%= desc['params_apply'] %>);
@@ -95,7 +95,7 @@ typedef VALUE (*RubyMethod)(...);
         return (<%= CppHelpers._return 'ret', desc['return'] %>);
       <% end %>
     }<% else %>
-    VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
+    static VALUE binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>(VALUE self<%= desc['binding_params'] %>)
     {
       long                  _ptr  = get_instance_pointer(self);
       <%= classname %>*     _this = reinterpret_cast<<%= classname %>*>(_ptr);
@@ -112,9 +112,9 @@ typedef VALUE (*RubyMethod)(...);
     <% end %>
   <% end unless struct['methods'].nil? %>
 
-  VALUE binding_<%= struct['binding-symbol'] %>__initialize(VALUE) { return (Qnil); }
+  static VALUE binding_<%= struct['binding-symbol'] %>__initialize(VALUE) { return (Qnil); }
 
-void Initialize_<%= struct['binding-symbol'] %>()
+static void Initialize_<%= struct['binding-symbol'] %>()
 {
   VALUE inherits = <% unless struct['inherits'].nil? %> Ruby::SolveSymbol("<%= struct['inherits'] %>"); <% else %> rb_cObject; <% end %>
   VALUE wrapped  = <% if struct['belongs_to'].nil? %> Rarity::wrapping_module; <% else %> Ruby::SolveSymbol("<%= struct['belongs_to'] %>"); <% end %>
@@ -254,9 +254,22 @@ namespace Ruby
     parts.push_back(symbol.substr(0, i));
     for (i = 0 ; i < parts.size() ; ++i)
     {
-      constant = Ruby::Constant(parts[i], constant);
-      if (constant == Qnil)
-        return (Qnil);
+      VALUE new_constant = Qnil;
+
+      try
+      {
+        Rarity::Protect([&new_constant, constant, parts, i](void)
+        {
+          new_constant = Ruby::Constant(parts[i].c_str(), constant);
+        });
+      }
+      catch (Ruby::Exception*)
+      {
+      }
+
+      if (new_constant == Qnil)
+        new_constant = rb_define_module_under(constant, parts[i].c_str());
+      constant = new_constant;
     }
     return (constant);
   }
