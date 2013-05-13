@@ -6,15 +6,16 @@ MyClass:
         - std::string
       return: void
     GetName:
-      return: std::string
+      const:  true
+      return: const std::string&
     SetName:
       params:
-        - std::string
+        - const std::string&
       return: void
     PrintArray:
       static: true
       params:
-        - std::vector<std::string>
+        - const std::vector<std::string>&
       return: void
     operator[]:
       params:
@@ -26,4 +27,10 @@ MyClass:
   methods:
     Thing:
       static: true
-      return: void
+      return: MyClass
+    RubyAwareMethod:
+      static: true
+      params:
+        - Ruby::Object
+        - Ruby::Object
+      return: Ruby::Object

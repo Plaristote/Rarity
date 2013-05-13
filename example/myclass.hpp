@@ -1,26 +1,35 @@
 #ifndef  MY_CLASS_HPP
 # define MY_CLASS_HPP
 
-# define  RARITY_RUBY
+//# define  RARITY_RUBY
+#undef RARITY_RUBY
 # include "rarity_scripting.hpp"
 # include <string>
+# include <algorithm>
+# include <iostream>
 
  class MyClass : ScriptBindings
  {
  public:
    struct Some
    {
-     static void Thing()
+     static MyClass Thing()
      {
        std::cout << "Called Some::Thing" << std::endl;
+       return (MyClass("bite"));
      }
+
+/*     static Ruby::Object RubyAwareMethod(Ruby::Object to_split, Ruby::Object to_split_with)
+     {
+       return (to_split.Apply("split", 1, &to_split_with));
+     }*/
    };
 
    MyClass(const std::string& name) : script_bindings("MyClass"), name(name)
    {
      std::cout << "Initializing the class in C++" << std::endl;
-     Ruby::Object self(*this);
-     self.Apply("get_name");
+     //Ruby::Object self(*this);
+     //self.Apply("get_name");
      std::cout << "Successfully applied" << std::endl;
    }
 
