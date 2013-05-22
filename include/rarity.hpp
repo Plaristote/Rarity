@@ -25,6 +25,12 @@ struct IRarityClass
   virtual VALUE GetRubyInstance(void) const = 0;
 };
 
+namespace Ruby
+{
+  template<typename TYPE>
+  TYPE          ToCppType(VALUE value);
+}
+
 # include "rarity_object.hpp"
 
 #include <vector>
@@ -87,9 +93,6 @@ namespace Ruby
   {
     return (HandleRarityClass<IsBaseOf<RarityClass, TYPE>::value>::template RubyType(type));
   }
-
-  template<typename TYPE>
-  TYPE          ToCppType(VALUE value);
 
   template<> IRarityClass* ToRubyType<IRarityClass*>(IRarityClass*& type);
 

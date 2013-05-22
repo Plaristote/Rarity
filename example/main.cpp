@@ -6,17 +6,18 @@ using namespace std;
 int main(void)
 {
   RarityInitialize(); // Must be called before any construction of RarityClass instances
+
   try
   {
     MyClass my_class("C++ created MyClass");
 
-    Ruby::Lambda lambda = Ruby::Evaluate("Proc.new { |str| puts \"Properly working lambda: #{str.inspect}\" }");
+/*    Ruby::Lambda lambda = Ruby::Evaluate("Proc.new { |str| puts \"Properly working lambda: #{str.inspect}\" }");
     std::function<void (std::string)> cpp_lambda(lambda);
 
     cpp_lambda("C++ call from std::function");
     lambda.Call<void, IRarityClass*>(&lambda);
     lambda.Call<void, std::string>("Coucou tu veux voir ma bite ?");
-    lambda.Call<void, MyClass*>(&my_class);
+    lambda.Call<void, MyClass*>(&my_class);*/
 
     Ruby::PushIncludePath("./scripts");
     if (!(Ruby::Require("test.rb")))
@@ -29,7 +30,9 @@ int main(void)
     Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");
 
     my_ruby_instance.Apply("run", 1, &my_class); // Method name, argument count, argument list of pointers to Rarity objects
-    my_ruby_instance.Apply("run");
+    int ret_val = my_ruby_instance.Apply("run");
+
+    std::cout << "Properly casted ret_val in int (" << ret_val << ')' << std::endl;
 
     Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
   }

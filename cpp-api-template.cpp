@@ -69,6 +69,8 @@ typedef VALUE (*RubyMethod)(...);
 <% classes.each do |classname, struct| %>
   <% has_constructor = false %>
 
+  <% struct['attrs'].each do |name, type| %>
+  <% end unless struct['attrs'].nil? %>
   <% struct['methods'].each do |method, desc| %>
     <% if method == 'initialize' %><% has_constructor = true %>
     static VALUE binding_<%= struct['binding-symbol'] %>_<%= method %>(VALUE self<%= desc['binding_params'] %>)
@@ -125,6 +127,9 @@ static void Initialize_<%= struct['binding-symbol'] %>()
   <% struct['methods'].each do |method, desc| %> <% definer = if desc['static'] != true then 'rb_define_method' else 'rb_define_module_function' end %>
   <%= definer %>(klass, "<%= desc['ruby_name'] %>", reinterpret_cast<RubyMethod>(binding_<%= struct['binding-symbol'] %>_<%= desc['name'] %>), <%= if desc['params'].nil? then 0 else desc['params'].count end %>);
   <% end unless struct['methods'].nil? %>
+  <% struct['attrs'].each do |name, type| %>
+  rb_define_attr(klass, "<%= name %>", 1, 1);
+  <% end unless struct['attrs'].nil? %>
 }
 <% end %>
 

@@ -46,7 +46,7 @@ classes.each do |classname, klass|
         if param == 'const char*'
           method['params_apply'] += "(Ruby::ToCppType<std::string>(param_#{index})).c_str()"
         else
-          method['params_apply'] += "(Ruby::ToCppType<#{param}>(param_#{index}))"
+          method['params_apply'] += "(Ruby::ToCppType<#{param.gsub /(const|&)/, ''} >(param_#{index}))"
         end
         expected_ruby_type = param
         expected_ruby_type = param[0...param.size - 1] if param =~ /\*$/
