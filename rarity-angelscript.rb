@@ -1,23 +1,32 @@
 $: << (File.expand_path '..', __FILE__)
 require "rarity-initialize"
 
-def solve_type classes, type
+def solve_type classes, type, inout_allowed = false
+  is_const     = !(type =~ /^[\s]*const/).nil?
+  is_ref       = !(type =~ /&[\s]*$/    ).nil?
+  is_ptr       = !(type =~ /\*[\s]*$/   ).nil?
   striped_type = type.gsub /const\s+/, ''
   striped_type = striped_type.gsub /&/, ''
   striped_type = striped_type.gsub '*', ''
 
   supported_types = [ 'int', 'float', 'double', 'bool', 'string', 'void' ]
-  if supported_types.include? striped_type
+  typename = if supported_types.include? striped_type
     striped_type
   elsif striped_type == 'std::string'
     'string'
   else
-    res = nil
+    res           = nil
+    inout_allowed = true
     classes.each do |name, klass|
-      res = klass['alias'] + '@' if name == striped_type
+      res         = klass['alias'] + '@' if name == striped_type
     end
     res
   end
+  unless typename.nil?
+    typename = "const #{typename}" if is_const
+    typename = "#{typename}&"      if is_ref and inout_allowed
+  end
+  typename
 end
 
 options         = @options
@@ -60,7 +69,7 @@ classes.each do |classname, klass|
           can_define = false
       end
     end
-    return_type         = solve_type classes, method['return']
+    return_type         = solve_type classes, method['return'], true
     can_define          = can_define && (not return_type.nil?)
     method['decl']      = unless method['static'] == true
       "#{return_type} #{method['alias']}("
