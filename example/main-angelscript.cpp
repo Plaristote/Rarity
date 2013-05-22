@@ -1,4 +1,5 @@
-#include "scriptengine.hpp"
+#include "as/scriptengine.hpp"
+#include "as/object.hpp"
 #include "myclass.hpp"
 
 using namespace std;
@@ -9,23 +10,22 @@ int main(void)
 
   try
   {
-    asIScriptEngine*  engine  = AngelScript::Engine::Get();
-    asIScriptContext* context = engine->CreateContext();
-    asIScriptModule*  module  = AngelScript::ModuleManager::Require("test-module", "scripts/test.as");
+    asIScriptEngine*    engine  = AngelScript::Engine::Get();
+    AngelScript::Object object("scripts/test.as");
+
+    object.asDefineMethod("main", "int main(MyClass@)");
 
     {
       MyClass my_myclass("Coucou tu veux voir ma bite ?");
-      asIScriptFunction* main = module->GetFunctionByDecl("int main(MyClass@)");
       int                retval;
 
       cout << "MyClass name: " << my_myclass.GetName() << endl;
-      AngelScript::Call(context, main, "O", &my_myclass);
-      retval = AngelScript::GetReturn<int>(context);
+      retval = object.Apply("main", 1, &my_myclass);
       cout << "MyClass name: " << my_myclass.GetName() << endl;
       cout << "Returned value: " << retval << endl;
     }
 
-    AngelScript::ModuleManager::Release(module);
+    //AngelScript::ModuleManager::Release(module);
   }
   catch (const std::exception* e)
   {

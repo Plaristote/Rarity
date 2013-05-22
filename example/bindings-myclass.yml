@@ -1,5 +1,7 @@
 MyClass:
   include: 'myclass.hpp' # The path to the file including your class
+  attrs:
+    some_ptr: MyClass
   methods:
     initialize: # The 'initialize' method will call for the C++ constructor.
       params:
@@ -28,9 +30,9 @@ MyClass:
     Thing:
       static: true
       return: MyClass
-    RubyAwareMethod:
-      static: true
-      params:
-        - Ruby::Object
-        - Ruby::Object
-      return: Ruby::Object
+#    RubyAwareMethod:
+#      static: true
+#      params:
+#        - Ruby::Object
+#        - Ruby::Object
+#      return: Ruby::Object

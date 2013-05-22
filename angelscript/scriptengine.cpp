@@ -1,4 +1,4 @@
-#include "scriptengine.hpp"
+#include "as/scriptengine.hpp"
 #include <iostream>
 #include <sstream>
 <% includes.each do |header| %>#include "<%= header %>"
@@ -205,3 +205,115 @@ void ModuleManager::OutputFunctionList(asIScriptModule* ptr)
   }
   cout << endl;
 }
+
+/*
+ * AngelScript Object
+ */
+#include "as/object.hpp"
+
+AngelScript::Object::Object(const std::string& filepath) : filepath(filepath), module(0)
+{
+  asIScriptEngine* engine = AngelScript::Engine::Get();
+  
+  if (engine)
+    context = engine->CreateContext();
+  else
+    throw AngelScript::Exception("Cannot create AngelScript objects if AngelScript isn't initialized.");
+  Initialize();
+}
+
+AngelScript::Object::Object(asIScriptContext* context, const std::string& filepath) : filepath(filepath), context(context), module(0)
+{
+  Initialize();
+}
+
+AngelScript::Object::~Object()
+{
+  if (module)
+    AngelScript::ModuleManager::Release(module);
+}
+
+void AngelScript::Object::Initialize(void)
+{
+  if (!context)
+    throw AngelScript::Exception("Cannot initialize AngelScript object without a context.");
+  if (module)
+    AngelScript::ModuleManager::Release(module);
+  module = AngelScript::ModuleManager::Require(filepath, filepath);
+  if (!module)
+    throw AngelScript::Exception(context);
+  std::for_each(functions.begin(), functions.end(), [this](Functions::value_type& item)
+  {
+    item.second.function = 0;
+  });
+}
+
+void AngelScript::Object::asDefineMethod(const std::string& name, const std::string& declaration)
+{
+  Function function;
+
+  function.function  = 0;
+  function.signature = declaration;
+  functions.emplace(Functions::value_type(name, function));
+}
+
+AngelScript::Object::ReturnType AngelScript::Object::Apply(const std::string& name, unsigned int argc, ...)
+{
+  va_list ap;
+  auto    it = functions.find(name);
+  
+  if (it == functions.end())
+    throw AngelScript::Exception("Current object does not have any declaration for function '" + name + '\'');
+  if (!(it->second.function))
+    it->second.function = module->GetFunctionByDecl(it->second.signature.c_str());
+  if (!(it->second.function))
+    throw AngelScript::Exception("Cannot find function '" + name + '\'');
+  context->Prepare(it->second.function);
+  va_start(ap, argc);
+  for (unsigned short i = 0 ; argc > i ; ++i)
+  {
+    IType* param = reinterpret_cast<IType*>(va_arg(ap, void*));
+    
+    switch (param->Flag())
+    {
+      case '0':
+        context->SetArgObject(i, param->Ptr());
+        break ;
+      case 'b':
+        context->SetArgByte  (i, *((Type<bool>*)(param)));
+        break ;
+      case 'i':
+        context->SetArgWord  (i, *((Type<int>*)(param)));
+        break ;
+      case 'l':
+        context->SetArgDWord (i, *((Type<long>*)(param)));
+        break ;
+      case 'd':
+        context->SetArgDouble(i, *((Type<double>*)(param)));
+        break ;
+      case 'f':
+        context->SetArgFloat (i, *((Type<float>*)(param)));
+        break ;
+    }
+  }
+  va_end(ap);
+  switch (context->Execute())
+  {
+  case asEXECUTION_EXCEPTION:
+    throw AngelScript::Exception("An exception was thrown while calling method '" + name + '\'');
+  case asEXECUTION_ABORTED:
+    throw AngelScript::Exception("The execution was aborted with a call to Abort while calling method '" + name + '\'');
+  case asCONTEXT_NOT_PREPARED:
+    throw AngelScript::Exception("The context could not be prepared while calling method '" + name + '\'');
+  case asEXECUTION_SUSPENDED:
+    throw AngelScript::Exception("The execution was suspended with a call to Suspend while calling method '" + name + '\'');
+  case asEXECUTION_FINISHED:
+    break ;
+  }  
+  return (ReturnType(context));
+}
+
+/*
+ * End AS OBJECT
+ */
+

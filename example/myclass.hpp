@@ -2,7 +2,7 @@
 # define MY_CLASS_HPP
 
 //# define  RARITY_RUBY
-#undef RARITY_RUBY
+# define RARITY_ANGELSCRIPT
 # include "rarity_scripting.hpp"
 # include <string>
 # include <algorithm>
@@ -25,7 +25,7 @@
      }*/
    };
 
-   MyClass(const std::string& name) : script_bindings("MyClass"), name(name)
+   MyClass(const std::string& name) : script_bindings("MyClass"), some_ptr(0), name(name)
    {
      std::cout << "Initializing the class in C++" << std::endl;
      //Ruby::Object self(*this);
@@ -56,6 +56,8 @@
       std::cout << "- " << value << std::endl;
     });
   }
+
+  MyClass* some_ptr;
 
  private:
    std::string name;

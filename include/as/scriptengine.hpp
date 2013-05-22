@@ -62,6 +62,7 @@ namespace AngelScript
   {
   public:
     Exception(asIScriptContext *ctx);
+    Exception(const std::string& str) : exc_string("[Rarity][AngelScript] " + str) {}
 
     const char* what(void) const throw() { return (exc_string.c_str()); }
 
