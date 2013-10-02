@@ -68,6 +68,10 @@ namespace Ruby
       message = RSTRING_PTR(inspect);
     }
 
+    virtual ~Exception(void) throw()
+    {
+    }
+
     const char* what(void) const throw()
     {
       return (message);
