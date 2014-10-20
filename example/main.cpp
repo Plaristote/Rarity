@@ -11,13 +11,12 @@ int main(void)
   {
     MyClass my_class("C++ created MyClass");
 
-/*    Ruby::Lambda lambda = Ruby::Evaluate("Proc.new { |str| puts \"Properly working lambda: #{str.inspect}\" }");
-    std::function<void (std::string)> cpp_lambda(lambda);
+    Ruby::Lambda                      lambda = Ruby::Evaluate("Proc.new { |str| puts \"Properly working lambda: #{str.inspect}\" }");
 
-    cpp_lambda("C++ call from std::function");
+    lambda.as_function<void, std::string>()("C++ call from std::function");
     lambda.Call<void, IRarityClass*>(&lambda);
     lambda.Call<void, std::string>("Coucou tu veux voir ma bite ?");
-    lambda.Call<void, MyClass*>(&my_class);*/
+    lambda.Call<void, MyClass*>(&my_class);
 
     Ruby::PushIncludePath("./scripts");
     if (!(Ruby::Require("test.rb")))

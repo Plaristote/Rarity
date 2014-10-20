@@ -139,6 +139,12 @@ namespace Ruby
     template<typename RET, typename... Args>
     operator std::function<RET (Args...)>() const
     {
+      return (as_function<RET, Args...>());
+    }
+
+    template<typename RET, typename... Args>
+    std::function<RET (Args...)> as_function() const
+    {
       VALUE self = instance;
 
       return (std::function<RET (Args...)>([self](Args... args) -> RET
