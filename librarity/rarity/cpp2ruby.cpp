@@ -1,7 +1,11 @@
 #include "cpp2ruby.hpp"
+#include "object.hpp"
 
 namespace Ruby
 {
+  template<> std::shared_ptr<IRarityClass> to_ruby_type<Ruby::Object>(Ruby::Object& value)
+  { return std::make_shared<Ruby::Object>(value.ruby_instance()); }
+
   template<> std::shared_ptr<IRarityClass> to_ruby_type<const char*>(const char*& value)
   { return std::make_shared<Ruby::Object>(rb_str_new2(value)); }
 

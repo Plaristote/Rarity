@@ -2,13 +2,16 @@
 # define RARITY_ARRAY_HPP
 
 # include "object.hpp"
-# include "cpp2ruby.hpp"
+# include <memory>
 # include <vector>
 # include <list>
 # include <set>
 
 namespace Ruby
 {
+  template<typename TYPE>
+  std::shared_ptr<IRarityClass> to_ruby_type(TYPE&);
+
   class Array : public Object
   {
   public:
@@ -126,5 +129,7 @@ namespace Ruby
     }
   };
 }
+
+# include "cpp2ruby.hpp"
 
 #endif

@@ -7,6 +7,7 @@
 # include "globals.hpp"
 # include "class.hpp"
 # include "object.hpp"
+# include "lambda.hpp"
 # include "class_interface.hpp"
 # include "rarity_type_traits.hpp"
 
@@ -72,16 +73,39 @@ namespace Ruby
         return (HandleRarityClass<is_base_of<RarityClass, TYPE>::value>::template ruby_type(value));
       }
     };
+
+    template<bool>
+    struct HandleFunction
+    {
+      template<typename TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TYPE value)
+      {
+        return HandleArray<is_iterable<TYPE>::value>::template ruby_type<TYPE>(value);
+      }
+    };
+
+    template<>
+    struct HandleFunction<true>
+    {
+      template<typename RET, typename... ARGS>
+      static std::shared_ptr<IRarityClass> ruby_type(std::function<RET(ARGS...)> value)
+      {
+        return Lambda::Factory<RET, ARGS...>::create(value);
+      }
+    };
   }
 
   template<typename TYPE>
   std::shared_ptr<IRarityClass> to_ruby_type(TYPE& value)
   {
     using namespace Cpp2Ruby;
-    return (HandleArray<is_iterable<TYPE>::value>::template ruby_type<TYPE>(value));
+    return HandleFunction<is_std_function<TYPE>::value>::template ruby_type(value);
   }
 
-  template<> std::shared_ptr<IRarityClass> to_ruby_type<IRarityClass*>(IRarityClass*& type);
+  class Object;
+
+  template<> std::shared_ptr<IRarityClass> to_ruby_type<Ruby::Object>(Ruby::Object& value);
+  template<> std::shared_ptr<IRarityClass> to_ruby_type<IRarityClass*>(IRarityClass*& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<const char*>(const char*& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<std::string>(std::string& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<const std::string>(const std::string& value);
