@@ -8,6 +8,9 @@ namespace Ruby
   template<> std::shared_ptr<IRarityClass> to_ruby_type<std::string>(std::string& value)
   { return std::make_shared<Ruby::Object>(rb_str_new2(value.c_str())); }
 
+  template<> std::shared_ptr<IRarityClass> to_ruby_type<const std::string>(const std::string& value)
+  { return std::make_shared<Ruby::Object>(rb_str_new2(value.c_str())); }
+
   template<> std::shared_ptr<IRarityClass> to_ruby_type<bool>(bool& value)
   { return std::make_shared<Ruby::Object>(value ? Qtrue : Qfalse); }
 

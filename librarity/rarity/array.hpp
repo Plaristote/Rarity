@@ -4,6 +4,7 @@
 # include "object.hpp"
 # include "cpp2ruby.hpp"
 # include <vector>
+# include <list>
 # include <algorithm>
 
 namespace Ruby
@@ -80,17 +81,32 @@ namespace Ruby
     {
       std::vector<TYPE> vector;
 
+      vector.reserve(size());
       for (auto it = begin() ; it != end() ; ++it)
         vector.push_back(to_cpp_type<TYPE>(*it));
       return vector;
     }
 
     template<typename TYPE>
+    std::list<TYPE> as_list() const
+    {
+      std::list<TYPE> list;
+
+      for (auto it = begin() ; it != end() ; ++it)
+        list.push_back(to_cpp_type<TYPE>(*it));
+      return list;
+    }
+
+    template<typename TYPE>
     operator std::vector<TYPE>() const
     {
-      Array cpy(instance);
+      return as_vector<TYPE>();
+    }
 
-      return (cpy.as_vector<TYPE>());
+    template<typename TYPE>
+    operator std::list<TYPE>() const
+    {
+      return as_list<TYPE>();
     }
   };
 }

@@ -19,7 +19,7 @@ namespace Ruby
     {
       TPL_TYPE* rarity_heap = new TPL_TYPE(type);
 
-      rarity_heap->Initialize();
+      rarity_heap->template initialize_rarity_bindings<TPL_TYPE>();
       {
         std::stringstream stream;
         Ruby::Constant    os("ObjectSpace");
@@ -43,7 +43,7 @@ namespace Ruby
   struct HandleRarityClass<false>
   {
     template<typename TYPE>
-    static std::shared_ptr<IRarityClass> RubyType(TYPE type)
+    static std::shared_ptr<IRarityClass> RubyType(TYPE)
     {
       rb_raise(Ruby::Constant("ArgumentError").ruby_instance(), "unsupported return type");
       return nullptr;
@@ -65,6 +65,7 @@ namespace Ruby
   template<> std::shared_ptr<IRarityClass> to_ruby_type<IRarityClass*>(IRarityClass*& type);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<const char*>(const char*& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<std::string>(std::string& value);
+  template<> std::shared_ptr<IRarityClass> to_ruby_type<const std::string>(const std::string& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<bool>(bool& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<float>(float& value);
   template<> std::shared_ptr<IRarityClass> to_ruby_type<double>(double& value);

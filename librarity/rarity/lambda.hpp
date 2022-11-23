@@ -5,6 +5,7 @@
 # include "object.hpp"
 # include "exception.hpp"
 # include "cpp2ruby.hpp"
+# include "ruby2cpp.hpp"
 # include <functional>
 
 namespace Ruby
@@ -32,7 +33,7 @@ namespace Ruby
     Lambda(VALUE instance) : Object(instance) {}
 
     template<typename RET, typename... Args>
-    RET call(Args... args)
+    VALUE call(Args... args)
     {
       unsigned int   arg_count = sizeof...(Args);
       VALUE          result;
@@ -45,6 +46,7 @@ namespace Ruby
       result = rb_protect(wrapped_apply, reinterpret_cast<VALUE>(this), &state);
       if (state)
         throw new Ruby::Exception();
+      return result;
     }
 
     template<typename RET, typename... Args>
@@ -62,7 +64,7 @@ namespace Ruby
       {
         Lambda lambda(self);
 
-        lambda.call<RET, Args...>(args...);
+        return Ruby::to_cpp_type<RET>(lambda.call<RET, Args...>(args...));
       }));
     }
   };

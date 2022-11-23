@@ -4,6 +4,9 @@
 # include "lambda.hpp"
 # include "array.hpp"
 # include "class.hpp"
+# include <functional>
+# include <list>
+# include <type_traits>
 
 namespace Ruby
 {
@@ -64,11 +67,17 @@ namespace Ruby
     }
   };
 
-  template<typename>
-  struct is_std_vector : std::false_type {};
+  template<typename Test, template<typename...> class Ref>
+  struct is_specialization : std::false_type {};
 
-  template<typename T, typename A>
-  struct is_std_vector<std::vector<T,A> > : std::true_type {};
+  template<template<typename...> class Ref, typename... Args>
+  struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
+
+  template<typename T>
+  struct is_std_vector : is_specialization<T, std::vector> {};
+
+  template<typename T>
+  struct is_std_list : is_specialization<T, std::list> {};
 
   template<typename>
   struct is_std_function : public std::false_type {};
@@ -94,7 +103,7 @@ namespace Ruby
     template<typename TYPE>
     static TYPE cpp_type(VALUE value)
     {
-      return (HandleArray<is_std_vector<TYPE>::value>::template cpp_type<TYPE>(value));
+      return (HandleArray<is_std_vector<TYPE>::value || is_std_list<TYPE>::value>::template cpp_type<TYPE>(value));
     }
   };
 
