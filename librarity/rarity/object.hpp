@@ -22,16 +22,20 @@ namespace Ruby
 
   class Lambda;
   class Array;
+  class Hash;
 
   class Object : public IRarityClass
   {
     friend class Lambda;
     friend class Array;
+    friend class Hash;
   public:
     Object(void) : instance(Qnil) {}
     Object(VALUE instance) : instance(instance) {}
 
     Object apply(Symbol method, unsigned int argc = 0, ...);
+
+    bool is_nil() const { return instance == Qnil; }
 
     VALUE  ruby_instance(void) const override { return (instance); }
 

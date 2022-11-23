@@ -2,6 +2,26 @@
 
 namespace Ruby
 {
+#define as_cpp_converter(TYPE, METHOD) \
+  template<> TYPE as_cpp_type<TYPE>(VALUE value) \
+  { \
+    return to_cpp_type<TYPE>(Ruby::Object(value).apply(#METHOD)); \
+  }
+
+  as_cpp_converter(std::string, to_s)
+  as_cpp_converter(float, to_f)
+  as_cpp_converter(double, to_f)
+  as_cpp_converter(char, to_i)
+  as_cpp_converter(int, to_i)
+  as_cpp_converter(long, to_i)
+  as_cpp_converter(long long, to_i)
+  as_cpp_converter(short, to_i)
+  as_cpp_converter(unsigned char, to_i)
+  as_cpp_converter(unsigned int, to_i)
+  as_cpp_converter(unsigned long, to_i)
+  as_cpp_converter(unsigned long long, to_i)
+  as_cpp_converter(unsigned short, to_i)
+
   template<> Ruby::Object to_cpp_type<Ruby::Object>(VALUE value)
   { return (value); }
 

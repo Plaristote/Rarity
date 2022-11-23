@@ -155,6 +155,26 @@ namespace Ruby
   template<> unsigned long to_cpp_type<unsigned long>(VALUE value);
   template<> unsigned long long to_cpp_type<unsigned long long>(VALUE value);
   template<> unsigned short to_cpp_type<unsigned short>(VALUE value);
+
+  template<typename TYPE>
+  TYPE as_cpp_type(VALUE value)
+  {
+    return to_cpp_type<TYPE>(value);
+  }
+
+  template<> std::string as_cpp_type<std::string>(VALUE value);
+  template<> float as_cpp_type<float>(VALUE value);
+  template<> double as_cpp_type<double>(VALUE value);
+  template<> char as_cpp_type<char>(VALUE value);
+  template<> int as_cpp_type<int>(VALUE value);
+  template<> long as_cpp_type<long>(VALUE value);
+  template<> long long as_cpp_type<long long>(VALUE value);
+  template<> short as_cpp_type<short>(VALUE value);
+  template<> unsigned char as_cpp_type<unsigned char>(VALUE value);
+  template<> unsigned int as_cpp_type<unsigned int>(VALUE value);
+  template<> unsigned long as_cpp_type<unsigned long>(VALUE value);
+  template<> unsigned long long as_cpp_type<unsigned long long>(VALUE value);
+  template<> unsigned short as_cpp_type<unsigned short>(VALUE value);
 }
 
 #endif
