@@ -65,6 +65,16 @@ namespace Ruby
       return at;
     }
 
+    void push_back(VALUE value)
+    {
+      rb_ary_push(instance, value);
+    }
+
+    void push_front(VALUE value)
+    {
+      rb_ary_store(instance, 0, value);
+    }
+
     template<typename TYPE>
     std::vector<TYPE> as_vector() const
     {
