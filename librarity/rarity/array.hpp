@@ -5,7 +5,7 @@
 # include "cpp2ruby.hpp"
 # include <vector>
 # include <list>
-# include <algorithm>
+# include <set>
 
 namespace Ruby
 {
@@ -98,6 +98,16 @@ namespace Ruby
     }
 
     template<typename TYPE>
+    std::set<TYPE> as_set() const
+    {
+      std::set<TYPE> set;
+
+      for (auto it = begin() ; it != end() ; ++it)
+        set.push_back(to_cpp_type<TYPE>(*it));
+      return set;
+    }
+
+    template<typename TYPE>
     operator std::vector<TYPE>() const
     {
       return as_vector<TYPE>();
@@ -107,6 +117,12 @@ namespace Ruby
     operator std::list<TYPE>() const
     {
       return as_list<TYPE>();
+    }
+
+    template<typename TYPE>
+    operator std::set<TYPE>() const
+    {
+      return as_set<TYPE>();
     }
   };
 }

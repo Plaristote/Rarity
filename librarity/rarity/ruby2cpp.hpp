@@ -4,112 +4,139 @@
 # include "lambda.hpp"
 # include "array.hpp"
 # include "class.hpp"
-# include <functional>
-# include <list>
-# include <type_traits>
+# include "rarity_type_traits.hpp"
 
 namespace Ruby
 {
-  template<bool IsArray>
-  struct HandleArray
+  namespace Ruby2Cpp
   {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
+    template<bool IsArray>
+    struct HandleArray
     {
-      Ruby::Array my_array(value);
-
-      return (my_array);
-    }
-  };
-
-  template<bool IsRarity>
-  struct HandleRarity
-  {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
-    {
-      if (value != Qnil)
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
       {
-        VALUE pointer = rb_ivar_get(value, rb_intern("@rarity_cpp_pointer"));
+        Ruby::Array my_array(value);
 
-        if (pointer == Qnil)
-        {
-          rb_raise(Ruby::Constant("ArgumentError").ruby_instance(), "invalid rarity pointer: the C++ counterpart might have expired, or the type was not a proper Rarity object.");
-        }
-        return (reinterpret_cast<TYPE>(NUM2LONG(pointer)));
+        return (my_array);
       }
-      return (0);
-    }
-  };
+    };
 
-  template<>
-  struct HandleRarity<false>
-  {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
+    template<bool IsRarity>
+    struct HandleRarity
     {
-      Ruby::Object       object(value);
-      const std::string  rubyname = to_cpp_type<std::string>(object.apply("class").apply("name"));
-      const std::string  cppname  = typeid(TYPE).name();
-      const std::string  message  = "unhandled type conversion from [Ruby][" + rubyname + "] to [C++][" + cppname + ']';
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        if (value != Qnil)
+        {
+          VALUE pointer = rb_ivar_get(value, rb_intern("@rarity_cpp_pointer"));
 
-      rb_raise(Ruby::Constant("Exception").ruby_instance(), message.c_str());
-    }
-  };
+          if (pointer == Qnil)
+          {
+            rb_raise(Ruby::Constant("ArgumentError").ruby_instance(), "invalid rarity pointer: the C++ counterpart might have expired, or the type was not a proper Rarity object.");
+          }
+          return (reinterpret_cast<TYPE>(NUM2LONG(pointer)));
+        }
+        return (0);
+      }
+    };
 
-  template<>
-  struct HandleArray<false>
-  {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
+    template<>
+    struct HandleRarity<false>
     {
-      return (HandleRarity<IsBaseOf<RarityClass*, TYPE>::value>::template cpp_type<TYPE>(value));
-    }
-  };
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        Ruby::Object       object(value);
+        const std::string  rubyname = to_cpp_type<std::string>(object.apply("class").apply("name"));
+        const std::string  cppname  = typeid(TYPE).name();
+        const std::string  message  = "unhandled type conversion from [Ruby][" + rubyname + "] to [C++][" + cppname + ']';
 
-  template<typename Test, template<typename...> class Ref>
-  struct is_specialization : std::false_type {};
+        rb_raise(Ruby::Constant("Exception").ruby_instance(), message.c_str());
+      }
+    };
 
-  template<template<typename...> class Ref, typename... Args>
-  struct is_specialization<Ref<Args...>, Ref>: std::true_type {};
-
-  template<typename T>
-  struct is_std_vector : is_specialization<T, std::vector> {};
-
-  template<typename T>
-  struct is_std_list : is_specialization<T, std::list> {};
-
-  template<typename>
-  struct is_std_function : public std::false_type {};
-
-  template<typename A, typename... Args>
-  struct is_std_function<std::function<A (Args...)> > : public std::true_type {};
-
-  template<bool>
-  struct HandleFunction
-  {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
+    template<bool isRarity>
+    struct HandleRarityCopy
     {
-      Lambda lambda(value);
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        TYPE* source = HandleRarity<true>::template cpp_type<TYPE*>(value);
+        TYPE copy(*source);
 
-      return (lambda);
-    }
-  };
+        return copy;
+      }
+    };
 
-  template<>
-  struct HandleFunction<false>
-  {
-    template<typename TYPE>
-    static TYPE cpp_type(VALUE value)
+    template<>
+    struct HandleRarityCopy<false>
     {
-      return (HandleArray<is_std_vector<TYPE>::value || is_std_list<TYPE>::value>::template cpp_type<TYPE>(value));
-    }
-  };
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        return HandleRarity<false>::template cpp_type<TYPE>(value);
+      }
+    };
+
+    template<bool isPointer>
+    struct HandlePointers
+    {
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        return (HandleRarity<std::is_base_of<RarityClass, typename std::pointer_traits<TYPE>::element_type>::value>::template cpp_type<TYPE>(value));
+      }
+    };
+
+    template<>
+    struct HandlePointers<false>
+    {
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        return HandleRarityCopy<std::is_base_of<RarityClass, TYPE>::value>::template cpp_type<TYPE>(value);
+      }
+    };
+
+    template<>
+    struct HandleArray<false>
+    {
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        return HandlePointers<std::is_pointer<TYPE>::value>::template cpp_type<TYPE>(value);
+      }
+    };
+
+    template<bool>
+    struct HandleFunction
+    {
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        Lambda lambda(value);
+
+        return (lambda);
+      }
+    };
+
+    template<>
+    struct HandleFunction<false>
+    {
+      template<typename TYPE>
+      static TYPE cpp_type(VALUE value)
+      {
+        return (HandleArray<is_iterable<TYPE>::value>::template cpp_type<TYPE>(value));
+      }
+    };
+  }
 
   template<typename TYPE>
   TYPE to_cpp_type(VALUE value)
   {
+    using namespace Ruby2Cpp;
     return (HandleFunction<is_std_function<TYPE>::value>::template cpp_type<TYPE>(value));
   }
 

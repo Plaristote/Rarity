@@ -8,58 +8,77 @@
 # include "class.hpp"
 # include "object.hpp"
 # include "class_interface.hpp"
+# include "rarity_type_traits.hpp"
 
 namespace Ruby
 {
-  template<bool>
-  struct HandleRarityClass
+  namespace Cpp2Ruby
   {
-    template<typename TPL_TYPE>
-    static std::shared_ptr<IRarityClass> RubyType(TPL_TYPE& type)
+    template<bool>
+    struct HandleRarityClass
     {
-      TPL_TYPE* rarity_heap = new TPL_TYPE(type);
-
-      rarity_heap->template initialize_rarity_bindings<TPL_TYPE>();
+      template<typename TPL_TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TPL_TYPE& value)
       {
-        std::stringstream stream;
-        Ruby::Constant    os("ObjectSpace");
-        Ruby::Object      proc;
+        TPL_TYPE* rarity_heap = new TPL_TYPE(value);
 
-        stream << (long)rarity_heap;
-        proc = Ruby::evaluate("Proc.new do (" + rarity_heap->ruby_symbol() + ".finalize " + stream.str() + ") end");
-        os.apply("define_finalizer", 2, rarity_heap, &proc);
+        rarity_heap->template initialize_rarity_bindings<TPL_TYPE>();
+        {
+          std::stringstream stream;
+          Ruby::Constant    os("ObjectSpace");
+          Ruby::Object      proc;
+
+          stream << (long)rarity_heap;
+          proc = Ruby::evaluate("Proc.new do (" + rarity_heap->ruby_symbol() + ".finalize " + stream.str() + ") end");
+          os.apply("define_finalizer", 2, rarity_heap, &proc);
+        }
+        return std::make_shared<Ruby::Object>(rarity_heap->ruby_instance());
       }
-      return std::make_shared<Ruby::Object>(rarity_heap->ruby_instance());
-    }
 
-    template<typename TYPE>
-    static std::shared_ptr<IRarityClass> RubyType(TYPE* type)
+      template<typename TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TYPE* value)
+      {
+        return std::make_shared<Ruby::Object>(value->ruby_instance());
+      }
+    };
+
+    template<>
+    struct HandleRarityClass<false>
     {
-      return std::make_shared<Ruby::Object>(type->ruby_instance());
-    }
-  };
+      template<typename TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TYPE)
+      {
+        rb_raise(Ruby::Constant("ArgumentError").ruby_instance(), "unsupported return type");
+        return nullptr;
+      }
+    };
 
-  template<>
-  struct HandleRarityClass<false>
-  {
-    template<typename TYPE>
-    static std::shared_ptr<IRarityClass> RubyType(TYPE)
+    template<bool>
+    struct HandleArray
     {
-      rb_raise(Ruby::Constant("ArgumentError").ruby_instance(), "unsupported return type");
-      return nullptr;
-    }
-  };
+      template<typename TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TYPE value)
+      {
+        return std::make_shared<Ruby::Array>(value.begin(), value.end());
+      }
+    };
 
-  template<typename A, typename B>
-  struct IsBaseOf : public std::is_base_of<A, B> {};
-
-  template<typename A, typename B>
-  struct IsBaseOf<A, B*> : public std::is_base_of<A, B> {};
+    template<>
+    struct HandleArray<false>
+    {
+      template<typename TYPE>
+      static std::shared_ptr<IRarityClass> ruby_type(TYPE value)
+      {
+        return (HandleRarityClass<is_base_of<RarityClass, TYPE>::value>::template ruby_type(value));
+      }
+    };
+  }
 
   template<typename TYPE>
-  std::shared_ptr<IRarityClass> to_ruby_type(TYPE& type)
+  std::shared_ptr<IRarityClass> to_ruby_type(TYPE& value)
   {
-    return (HandleRarityClass<IsBaseOf<RarityClass, TYPE>::value>::template RubyType(type));
+    using namespace Cpp2Ruby;
+    return (HandleArray<is_iterable<TYPE>::value>::template ruby_type<TYPE>(value));
   }
 
   template<> std::shared_ptr<IRarityClass> to_ruby_type<IRarityClass*>(IRarityClass*& type);
