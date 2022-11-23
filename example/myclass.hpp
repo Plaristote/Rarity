@@ -1,11 +1,11 @@
 #ifndef  MY_CLASS_HPP
 # define MY_CLASS_HPP
 
-# define  RARITY_RUBY
-# include "rarity_scripting.hpp"
+# include "rarity.hpp"
 # include <string>
+# include <iostream>
 
- class MyClass : ScriptBindings
+ class MyClass : public RarityClass
  {
  public:
    struct Some
@@ -16,11 +16,11 @@
      }
    };
 
-   MyClass(const std::string& name) : script_bindings("MyClass"), name(name)
+   MyClass(const std::string& name, const std::type_info& type = typeid(MyClass)) : RarityClass(type), name(name)
    {
      std::cout << "Initializing the class in C++" << std::endl;
      Ruby::Object self(*this);
-     self.Apply("get_name");
+     self.apply("get_name");
      std::cout << "Successfully applied" << std::endl;
    }
 
@@ -52,10 +52,12 @@
    std::string name;
  };
 
- class MyOtherClass : ScriptBindings
+ namespace Bleh
+{
+ class MyOtherClass : public MyClass
  {
  public:
-   MyOtherClass(void) : script_bindings("MyOtherClass")
+   MyOtherClass(void) : MyClass("parrot", typeid(MyOtherClass))
    {
      my_class = 0;
    }
@@ -77,5 +79,6 @@
  private:
    MyClass* my_class;
  };
+}
 
 #endif

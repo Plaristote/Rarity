@@ -1,0 +1,34 @@
+import intf_libs += libruby%lib{ruby}
+
+lib{rarity}: {hxx ixx txx cxx}{**} $impl_libs $intf_libs
+
+hxx{export}@./: cxx.importable = false
+
+# Build options.
+#
+cxx.poptions =+ "-I$out_root" "-I$src_root"
+
+{hbmia obja}{*}: cxx.poptions += -DLIBRARITY_STATIC_BUILD
+{hbmis objs}{*}: cxx.poptions += -DLIBRARITY_SHARED_BUILD
+
+# Export options.
+#
+lib{rarity}:
+{
+  cxx.export.poptions = "-I$out_root/librarity/" "-I$src_root/librarity/"
+  cxx.export.libs = $intf_libs
+}
+
+liba{rarity}: cxx.export.poptions += -DLIBRARITY_STATIC
+libs{rarity}: cxx.export.poptions += -DLIBRARITY_SHARED
+
+if $version.pre_release
+  lib{rarity}: bin.lib.version = "-$version.project_id"
+else
+  lib{rarity}: bin.lib.version = "-$version.major.$version.minor"
+
+{hxx ixx txx}{*}:
+{
+  install         = include/
+  install.subdirs = true
+}

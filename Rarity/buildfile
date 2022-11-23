@@ -1,0 +1,7 @@
+libs =
+import libs += libclang%lib{clang}
+import libs += libcrails-semantics%lib{crails-semantics}
+
+exe{rarity}: {hxx ixx txx cxx}{**} $libs testscript
+
+cxx.poptions =+ "-I$out_root" "-I$src_root"

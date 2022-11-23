@@ -1,0 +1,13 @@
+: 1
+name: Rarity
+version: 1.0.0
+summary: Rarity C++ executable
+license: BSD-3-Clause
+description-file: README.md
+url: https://github.com/Plaristote/Rarity
+email: michael@unetresgrossebite.com
+depends: * build2 >= 0.15.0
+depends: * bpkg >= 0.15.0
+depends: libclang >= 13.0.0
+depends: libcrails-semantics >= 2.0.0
+depends: libruby >= 2.5.0

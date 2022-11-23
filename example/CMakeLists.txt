@@ -1,20 +1,15 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
-find_package(Ruby REQUIRED)
+project(rarity-example)
 
-include_directories(../include ${RUBY_INCLUDE_DIRS})
-link_directories(${RUBY_LIBDIRS})
-
-if (CMAKE_COMPILER_IS_GNUCC)
-  set(CMAKE_CXX_FLAGS "-std=c++0x")
-elseif(APPLE)
-  set(CMAKE_CXX_FLAGS "-std=c++11")
-endif()
+find_package(PkgConfig)
+pkg_check_modules(RARITY REQUIRED librarity)
 
 file(GLOB_RECURSE sourceFiles
      main.cpp
      rarity-bindings.cpp)
 
+include_directories(${RARITY_INCLUDE_DIRS})
+link_directories(${RARITY_LIBRARY_DIRS})
 add_executable(rarity-example ${sourceFiles})
-
-target_link_libraries(rarity-example ruby)
+target_link_libraries(rarity-example ${RARITY_LIBRARIES})

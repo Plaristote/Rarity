@@ -1,168 +1,176 @@
 Rarity
 ======
 
-Code generator for binding C++ APIs to Ruby with no sweat.
-Rarity consists of a few header files you will need to include in your project and a script that will generate
-your bindings by checking out a YAML file containing your bindings description.
+Rarity is a tool designed to facilitate interactions between C++ and Ruby code. It consists of two elements:
+
+- Rarity itself, which is libclang-based tool that parses your C++ code and generates Ruby bindings for it
+- librarity, which wraps the ruby C library and allows you to interact with Ruby objects with a simple and efficient C++ API
 
 Warning: this software hasn't been nearly tested enough to be declared stable. It is not recommended for production use.
 You are very much encouraged to participate the testing effort by sending feedback and bug reports.
 
+Build
+===
+Rarity uses the [build2](https://www.build2.org) build system and depends on `libclang` and `libruby`. Once you've
+[installed build2](https://www.build2.org/install.xhtml) and the other dependencies, use the following commands to
+build Rarity from source:
+
+```sh
+git clone https://github.com/Plaristote/Rarity.git
+
+bpkg create -d "build-Rarity-gcc" cc config.cxx=g++
+
+cd build-Rarity
+
+bpkg add --type dir ../Rarity
+bpkg fetch
+bpkg build Rarity '?sys:libclang/*' '?sys:libruby/*'
+```
+
+Tweak the `config.cxx=g++` argument if you wish to use another compiler (ex: `config.cxx=clang++`).
+
+If you're using Linux or FreeBSD, You can then install Rarity to your system using:
+
+```
+bpkg install Rarity \
+  config.install.root=/usr \
+  config.install.sudo=sudo
+```
+
+You should now have installed the `librarity` library, the `rarity` code generator, as well as the headers for `librarity`. Let's see how to put those to good use:
+
 Usage
 ===
-By default, you need to go into your project's directory and execute the following (replacing $RARITY_PATH with the path to the rarity.rb script)
+librarity
+====
+Let's first start by learning the basics of librarity by initializing a Ruby VM from a C++ program:
 
-      ruby $RARITY_PATH/rarity.rb
-      
-This will create a rarity-bindings.cpp file in the current directory that you will need to link to your project.
-You will also have to add the include directory $RARITY_PATH/include and link with a Ruby library.
+```
+#include <rarity.hpp>
+#include <iostream>
 
-You can also specify your own input directory and output file like this:
-
-      ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp
-
-There's also a third option that allows you to create a Ruby module that will wrap all the bindings:
-
-      ruby $RARITY_PATH/rarity.rb --input directory --output file.cpp --module MyRubyBindings
-
-How to generate bindings for a class ?
-===
-The first thing to do is to add a component called 'RarityClass' to the class using inheritence. Any class that needs to be used from both
-C++ and Ruby must include this component. After including the component, our code will look like this:
-    
-./my_class.hpp
-    
-```C++
-class MyClass : public RarityClass
+int main(int, char**)
 {
-public:
-  MyClass(const std::string& name) : RarityClass("MyClass"), name(name)
-  {}
+  Rarity rarity; // Must be instantiated once and only once
 
-  const std::string& GetName() const
-  {
-    return (name);
-  }
-  
- void SetName(const std::string& str)
- {
-   name = str;
- }
- 
- static void ClassMethod(void)
- {
-   std::cout << "Executing Class Method" << std::endl;
- }
-
-private:
-  std::string name;
-};    
-```
-     
-Notice that your constructor needs to call RarityClass's constructor, which takes as parameter the name of the Ruby class
-that will be bound with this class.
-
-Now to the actual binding part.
-For Rarity to generate the bindings, you will need to create a binding YAML file that will look like this:
-
-./bindings-myclass.yml
-
-```YAML
-MyClass:
-  include: 'myclass.hpp' # The path to the file including your class
-  methods:
-    initialize: # The 'initialize' method will call the C++ constructor.
-      params:
-        - std::string
-      return: void
-    GetName:
-      return: std::string
-    SetName:
-      params:
-        - std::string
-      return: void
-    ClassMethod:
-      static: true # If the method uses the static qualifier, you must set this flag to true.
-      return: void
-```
-
-The Rarity script will recursively look for YAML files whose names start with 'bindings-', so your YAML file must begin
-with those characters (e.g.: bindings-myclass.yml).
-
-How to use the bindings from a C++ application?
-===
-Rarity also comes with a set of tools for easily using the bindings. A few objects allow you to use Ruby objects from C++ and
-handle exceptions properly.
-Let's write a Ruby script and C++ main function using our previous bindings:
-
-./scripts/test.rb
-
-```Ruby
-class MyRubyClass
-  def initialize
-    puts "Initializing Ruby class"
-    @my_class = MyClass.new "Name set from Ruby"
-  end
-  
-  def run my_class = nil
-    my_class ||= @my_class
-    puts "[Ruby] #{my_class.get_name}"
-  end
-  
-  def run_class_member
-    MyClass.class_method
-  end
-end
-```
-
-./main.cpp
-
-```C++
-#include "rarity.hpp"
-#include "myclass.hpp"
-
-int main(void)
-{
-  RarityInitialize(); // Must be called before any construction of RarityClass instances
   try
   {
-    MyClass my_class("C++-created MyClass");
-  
-    Ruby::PushIncludePath("./scripts");
-    Ruby::Require("test.rb");
-    
-    Ruby::Constant my_ruby_class("MyRubyClass");
-    Ruby::Object   my_ruby_instance = my_ruby_class.Apply("new");
+    Ruby::Constant string_class("String");
+    Ruby::Object string_instance = string_class.apply("new");
+    std::string part1("Hello"), part2(", world!");
 
-    my_ruby_instance.Apply("run", 1, &my_class); // Method name, argument count, argument list of pointers to Rarity objects
-    my_ruby_instance.Apply("run"); // Call the same script method using the default parameter value
-
+    string_instance = string_instance.apply("+", 1, Ruby::to_ruby_type(part1).get());
+    string_instance = string_instance.apply("+", 1, Ruby::to_ruby_type(part2).get());
+    std::cout << "String: " << Ruby::inspect(string_instance) << std::endl;
   }
-  catch (const std::exception* e) // Ruby exceptions are converted to std::exception-compatible objects
+  catch (const std::exception& e)
   {
-    std::cerr << "Caught exception " << e->what() << std::endl;
+    std::cerr << "Catched exception: " << e.what() << std::endl;
   }
-  Ruby::Constant("GC").Apply("start"); // Forces Ruby's garbage collector to start
-  RarityFinalize();
-  return (0);
+  return 0;
 }
 ```
-    
-And that's it. We've seen pretty much everything Rarity offers.
 
+This example should display `String: "Hello, world!"` when executed. This involved the use of two types:
+
+Ruby::Object
+========
+`Ruby::Object` is used to interact with any Ruby object, allowing implicit conversion to any supported C++ type, and providing the `apply` method, which works similarly to the `send` method in Ruby.
+
+When sending parameters to a Ruby method via `apply`, we must first specify how many parameters will be sent, then we send pointers to Ruby objects. In this example, we also created Ruby objects from C++ objects on the fly using `Ruby::to_ruby_type`, which returns an `std::shared_ptr`. `apply` doesn't support complex types (limitations of `va_args`), so you must also make sure to send raw pointers instead of smart pointers (hence the use of `.get()` after calls to `Ruby::to_ruby_type`).
+
+On the other hand, `Ruby::Object` can be implicitely casted to any supported C++ type (see [Natively supporteed type](#Natively_supported_types)), such as:
+
+```
+Ruby::Object result = Ruby::Constant("String").apply("new");
+std::string str = result; // implicit cast to std::string
+```
+
+Ruby::Constant
+========
+`Ruby::Constant` implements `Ruby::Object`, and allows you to quickly get a hold of a constant, such as a class object, a module. By default, constants are looked up in Ruby's global object, but you can also specify in which module you wish to look for a constant:
+
+```
+Ruby::require("net/http");
+Ruby::Object net = Ruby::Constant("Net");
+Ruby::Object http = Ruby::Constant("HTTP", net);
+std::string domain("example.com"), path("/index.html");
+Ruby::Object response = http.apply("get",
+  Ruby::to_ruby_type(domain).get(),
+  Ruby::to_ruby_type(path).get()
+);
+
+std::cout << (std::string)(response) << std::endl;
+```
+
+Ruby::Lambda
+========
+librarity also allows you to invoke Ruby's `Proc` objects from C++,
+using the `Ruby::Lambda` object. Let's see how that works:
+
+```
+Ruby::Lambda lambda = Ruby::evaluate(
+  "Proc.new { |param| puts \"Ruby lambda says: #{param.inspect}\" }"
+);
+
+lambda.call<void, std::string>("Hello, world !");
+```
+
+In this example, we used `call` to invoke the `Proc` object as if it were
+a C++ function. We used template parameters to hint that the return type
+would be `void`, and that we would send one paramter with the `std::string`
+type.
+
+We could've also used any other type supported by Rarity:
+
+```
+lambda.call<void, int>(42);
+```
+
+On top of that, if you do not wish to invoke the encapsulated code right
+away, you may also get a hold of it as an instance of `std::function`:
+
+```
+std::function<void (std::string)> callback = lambda.as_function<void, std::string>();
+
+callback("Hello, world !");
+```
+
+C++ to Ruby bindings
+====
+As you can see, librarity allows us to easily interact with Ruby object from C++. But what if we want to expose some of our C++ program to Ruby ? That's where Rarity's magic truly starts.
+
+```
+rarity \
+  -i header.hpp \
+  -o rarity_bindings.cpp \
+  --clang \
+  -I/usr/lib64/llvm13/lib/clang/13.0.1/include
+```
+
+TODO
+
+Ruby extensions
+=====
+TODO
+At some point, Rarity will also work as a way to write Ruby extensions using C++.
 
 Notes on API generation
 ======
 Naming convention
 ============
-In Ruby, method names are supposed to be written in snake case. Note that regardless of your naming convention in C++,
-the Ruby bindings will use snake case (this means that in our previous example, the API generated for MyClass is actually:
+In Ruby, method names are supposed to be written in snake case. Note that regardless of your naming convention in C++, the Ruby bindings will use snake case.
 
-    MyClass#initialize
-    MyClass#get_name
-    MyClass#set_name
+Similarly, constants are supposed to be written using upper camelcase, and Rarity will enforce that on your classes and namespaces when generating their bindings.
 
-It is possible to override this behavior by setting an attribute 'alias' in the method's description.
+For instance, the following C++ code:
+```
+struct my_struct
+{
+  static bool Method() { return true; }
+};
+```
+Will be bound in Ruby as: `MyStruct.method` instead of `my_struct.Method`.
 
 Natively supported types
 ============

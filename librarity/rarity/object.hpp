@@ -1,7 +1,9 @@
 #ifndef  RARITY_OBJECT_HPP
 # define RARITY_OBJECT_HPP
 
-# include "rarity.hpp"
+# include "class_interface.hpp"
+# include <ruby.h>
+# include <string>
 
 namespace Ruby
 {
@@ -18,34 +20,39 @@ namespace Ruby
     ID    symbol;
   };
 
+  class Lambda;
+  class Array;
+
   class Object : public IRarityClass
   {
+    friend class Lambda;
+    friend class Array;
   public:
     Object(void) : instance(Qnil) {}
     Object(VALUE instance) : instance(instance) {}
 
-    Object Apply(Symbol method, unsigned int argc = 0, ...);
+    Object apply(Symbol method, unsigned int argc = 0, ...);
 
-    VALUE  GetRubyInstance(void) const { return (instance); }
+    VALUE  ruby_instance(void) const { return (instance); }
 
     operator VALUE() const { return (instance); }
 
     template<typename T>
     operator T() const
     {
-      return (Ruby::ToCppType<T>(instance));
+      return (Ruby::to_cpp_type<T>(instance));
     }
 
     Object operator[](Object object)
     {
-      return (Apply(Symbol("[]"), 1, &object));
+      return (apply(Symbol("[]"), 1, &object));
     }
 
-  protected:
+  private:
     VALUE instance;
 
     // Call Wrapper
-    static VALUE WrappedApply(VALUE self);
+    static VALUE wrapped_apply(VALUE self);
     Symbol         method;
     unsigned int   argc;
     IRarityClass** argv;
@@ -63,7 +70,7 @@ namespace Ruby
   {
     Exception(void) : Object(rb_gv_get("$!"))
     {
-      VALUE inspect = Apply("inspect");
+      VALUE inspect = apply("inspect");
 
       message = RSTRING_PTR(inspect);
     }
