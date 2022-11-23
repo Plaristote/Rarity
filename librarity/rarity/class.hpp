@@ -27,12 +27,14 @@ public:
   template<typename T>
   RarityClass(const T*) { initialize_rarity_bindings<T>(); }
   RarityClass(const std::type_info& type) { initialize_rarity_bindings(type); }
+  RarityClass(const RarityClass&);
   RarityClass() {}
   ~RarityClass();
 
   template<typename T>
   void        initialize_rarity_bindings() { initialize_rarity_bindings(typeid(T)); }
   void        initialize_rarity_bindings(const std::type_info&);
+  void        initialize_rarity_bindings(VALUE klass);
   VALUE       ruby_type(void) const;
   VALUE       ruby_instance(void) const override { return (ruby_instance_m); }
   void        set_ruby_instance(VALUE val);
