@@ -11,6 +11,22 @@ namespace Ruby
   class Array : public Object
   {
   public:
+    struct iterator
+    {
+      iterator(VALUE instance, long position = 0) : position(position), instance(instance) {}
+
+      Ruby::Object operator*() const { return rb_ary_entry(instance, position); }
+      Ruby::Object operator->() const { return Ruby::Object(**this); }
+
+      iterator& operator++() { position++; return *this; }
+      iterator& operator++(int i) { position += i; return *this; }
+      bool operator==(const iterator& other) const;
+      bool operator!=(const iterator& other) const { return !(*this == other); }
+
+      long position = 0;
+      VALUE instance;
+    };
+
     Array(void)       : Object(rb_ary_new()) {}
     Array(VALUE copy) : Object(copy)         {}
 
@@ -18,28 +34,45 @@ namespace Ruby
     Array(const std::vector<TYPE>& array)
     {
       instance = rb_ary_new();
-      for (TYPE& copy : array)
-      {
-        auto tmp = Ruby::to_ruby_type(copy);
+      insert(begin(), array.begin(), array.end());
+    }
 
-        rb_ary_push(instance, tmp->ruby_instance());
+    template<typename ITERATOR>
+    Array(ITERATOR it, const ITERATOR end)
+    {
+      instance = rb_ary_new();
+      insert(begin(), it, end);
+    }
+
+    std::size_t size() const { return rb_array_len(instance); }
+    Object operator[](int index);
+    iterator begin() const { return iterator(instance); }
+    iterator end() const { return iterator(instance, -1); }
+    iterator erase(iterator at);
+    iterator insert(iterator at, VALUE value);
+
+    template<typename ITERATOR>
+    iterator insert(iterator at, ITERATOR it, ITERATOR end)
+    {
+      while (it != end)
+      {
+        auto tmp = Ruby::to_ruby_type(*it);
+
+        insert(at, tmp->ruby_instance());
+        ++it;
+        ++at;
       }
+      return at;
     }
 
     template<typename TYPE>
-    std::vector<TYPE> as_vector()
+    std::vector<TYPE> as_vector() const
     {
-      unsigned int      i    = 0;
-      unsigned int      size = NUM2UINT((VALUE)(apply("count")));
       std::vector<TYPE> vector;
 
-      for (; i < size ; ++i)
-      {
-        Ruby::Object value(rb_ary_entry(instance, i));
-
-        vector.push_back(to_cpp_type<TYPE>(value));
-      }
-      return (vector);
+      for (auto it = begin() ; it != end() ; ++it)
+        vector.push_back(to_cpp_type<TYPE>(*it));
+      return vector;
     }
 
     template<typename TYPE>
