@@ -3,6 +3,7 @@
 
 # include "globals.hpp"
 # include "object.hpp"
+# include "exception.hpp"
 # include "cpp2ruby.hpp"
 # include <functional>
 

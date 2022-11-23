@@ -70,16 +70,16 @@ int main(int, char**)
     Ruby::push_include_path(".");
     Ruby::require("script.rb");
   }
-  catch (const std::exception& e)
+  catch (const Ruby::Exception& e)
   {
-    std::cerr << "Catched exception: " << e.what() << std::endl;
+    std::cerr << "Catched exception: " << e << std::endl;
   }
   return 0;
 }
 ```
 
-Note that we added `try/catch` blocks in this example: that's because uncaught
-Ruby exceptions will be thrown as C++ exception.
+Note that we added `try/catch` blocks in this example: uncaught Ruby exceptions will
+be thrown as C++ exception using the `Ruby::Exception` type.
 
 Those were the basics. Let's now see how to get handles to Ruby objects and
 interact with those:

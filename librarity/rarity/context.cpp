@@ -1,4 +1,5 @@
 #include "context.hpp"
+#include "exception.hpp"
 #include <string>
 #include <stdexcept>
 

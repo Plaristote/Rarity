@@ -5,6 +5,7 @@
 # include "rarity/object.hpp"
 # include "rarity/lambda.hpp"
 # include "rarity/array.hpp"
+# include "rarity/exception.hpp"
 # include "rarity/class.hpp"
 # include "rarity/context.hpp"
 # include "rarity/cpp2ruby.hpp"

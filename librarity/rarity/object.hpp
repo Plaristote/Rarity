@@ -33,7 +33,7 @@ namespace Ruby
 
     Object apply(Symbol method, unsigned int argc = 0, ...);
 
-    VALUE  ruby_instance(void) const { return (instance); }
+    VALUE  ruby_instance(void) const override { return (instance); }
 
     operator VALUE() const { return (instance); }
 
@@ -64,28 +64,6 @@ namespace Ruby
   {
   public:
     Constant(Symbol symbol, VALUE base = rb_cObject) : Object(rb_const_get(base, symbol)) {}
-  };
-
-  struct Exception : public std::exception, public Object
-  {
-    Exception(void) : Object(rb_gv_get("$!"))
-    {
-      VALUE inspect = apply("inspect");
-
-      message = RSTRING_PTR(inspect);
-    }
-
-    virtual ~Exception(void) throw()
-    {
-    }
-
-    const char* what(void) const throw()
-    {
-      return (message);
-    }
-
-  private:
-    const char* message;
   };
 }
 

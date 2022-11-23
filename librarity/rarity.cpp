@@ -37,7 +37,11 @@ namespace Ruby
 
     rb_protect(rescuable_require, reinterpret_cast<VALUE>(path.c_str()), &state);
     if (state)
+    {
+      if (Exception::has_exception())
+        throw Ruby::Exception();
       return (false);
+    }
     return (true);
   }
 
