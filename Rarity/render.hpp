@@ -2,6 +2,7 @@
 #include "definitions.hpp"
 #include <filesystem>
 #include <sstream>
+#include <fstream>
 
 class Renderer
 {
@@ -10,7 +11,7 @@ class Renderer
   const std::vector<std::filesystem::path>& files;
   const std::vector<ClassDefinition>& classes;
   const std::vector<NamespaceDefinition>& namespaces;
-  std::stringstream source;
+  std::ofstream source;
   std::string initializer_name;
 public:
   Renderer(
@@ -19,7 +20,7 @@ public:
     const std::vector<std::filesystem::path>& files,
     const std::vector<ClassDefinition>& a,
     const std::vector<NamespaceDefinition>& b
-  ) : module_name(module_name), target(target), files(files), classes(a), namespaces(b)
+  ) : module_name(module_name), target(target), files(files), classes(a), namespaces(b), source(target.string().c_str())
   {
     initializer_name = "initialize_rarity_bindings";
   }

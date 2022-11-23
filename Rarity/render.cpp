@@ -27,10 +27,7 @@ void Renderer::render()
   generate_cpp_to_ruby_template();
   source << endl;
   generate_classes_bindings();
-
-  ofstream file(target.string().c_str());
-  file << source.str();
-  file.close();
+  source.close();
 }
 
 void Renderer::generate_include_paths()
