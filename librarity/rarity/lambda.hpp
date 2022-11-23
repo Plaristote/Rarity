@@ -170,7 +170,7 @@ namespace Ruby
       argc   = arg_count;
       result = rb_protect(wrapped_apply, reinterpret_cast<VALUE>(this), &state);
       if (state)
-        throw new Ruby::Exception();
+        throw Ruby::Exception();
       return result;
     }
 
