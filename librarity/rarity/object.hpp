@@ -35,8 +35,6 @@ namespace Ruby
 
     VALUE  ruby_instance(void) const override { return (instance); }
 
-    operator VALUE() const { return (instance); }
-
     template<typename T>
     operator T() const
     {

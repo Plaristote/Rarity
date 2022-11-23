@@ -7,6 +7,7 @@ struct IRarityClass
 {
   virtual ~IRarityClass() {}
   virtual VALUE ruby_instance(void) const = 0;
+  operator VALUE() const { return ruby_instance(); }
 };
 
 namespace Ruby
