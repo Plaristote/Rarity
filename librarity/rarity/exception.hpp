@@ -1,14 +1,14 @@
 #ifndef  RARITY_EXCEPTION_HPP
 # define RARITY_EXCEPTION_HPP
 
-# include "object.hpp"
+# include <ruby.h>
 # include <exception>
 # include <ostream>
 # include <vector>
 
 namespace Ruby
 {
-  struct Exception : public std::exception, public Object
+  struct Exception : public std::exception
   {
     Exception(void);
     Exception(VALUE);
@@ -29,10 +29,13 @@ namespace Ruby
       return trace;
     }
 
+    operator VALUE() const { return instance; }
+
   private:
     void initialize();
     std::string message;
     std::vector<std::string> trace;
+    VALUE instance;
   };
 }
 

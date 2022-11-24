@@ -1,15 +1,16 @@
 #include "exception.hpp"
 #include "array.hpp"
+#include "object.hpp"
 
 using namespace Ruby;
 using namespace std;
 
-Exception::Exception(void) : Object(rb_gv_get("$!"))
+Exception::Exception(void) : instance(rb_gv_get("$!"))
 {
   initialize();
 }
 
-Exception::Exception(VALUE value) : Object(value)
+Exception::Exception(VALUE value) : instance(value)
 {
   initialize();
 }
@@ -21,10 +22,10 @@ bool Exception::has_exception()
 
 void Exception::initialize()
 {
-  VALUE inspect = apply("inspect");
+  VALUE inspect = Object(instance).apply("inspect");
 
   message = RSTRING_PTR(inspect);
-  trace = Ruby::Array(apply("backtrace").ruby_instance()).as_vector<string>();
+  trace = Ruby::Array(Object(instance).apply("backtrace").ruby_instance()).as_vector<string>();
 }
 
 ostream& operator<<(ostream& stream, const Exception& exception)
