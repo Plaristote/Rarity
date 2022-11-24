@@ -2,6 +2,7 @@
 #include "definitions.hpp"
 #include <filesystem>
 #include <optional>
+#include <algorithm>
 
 class RarityParser
 {
@@ -9,18 +10,32 @@ class RarityParser
   {
     ClassDefinition       klass;
     CX_CXXAccessSpecifier current_access;
-    CXCursor              cursor;
+    std::vector<CXCursor> cursors;
     bool operator==(const std::string& value) const { return klass.full_name == value; }
-    bool operator==(const CXCursor value) const { return clang_equalCursors(cursor, value) != 0; }
+    bool operator==(const CXCursor value) const
+    {
+      auto it = std::find_if(cursors.begin(), cursors.end(), [&value](const CXCursor candidate)
+      {
+        return clang_equalCursors(value, candidate);
+      });
+      return it != cursors.end();
+    }
   };
 
   struct NamespaceContext
   {
-    NamespaceDefinition ns;
-    CXCursor            cursor;
-    ClassContext        current_class;
+    NamespaceDefinition   ns;
+    std::vector<CXCursor> cursors;
+    ClassContext          current_class;
     bool operator==(const std::string& value) const { return ns.full_name == value; }
-    bool operator==(const CXCursor value) const { return clang_equalCursors(cursor, value) != 0; }
+    bool operator==(const CXCursor value) const
+    {
+      auto it = std::find_if(cursors.begin(), cursors.end(), [&value](const CXCursor candidate)
+      {
+        return clang_equalCursors(value, candidate);
+      });
+      return it != cursors.end();
+    }
   };
 
   std::vector<std::string>      directories;
@@ -56,5 +71,6 @@ private:
 
   std::optional<std::string> fullname_for(CXCursor) const;
   ClassContext* find_class_for(CXCursor);
+  ClassContext* find_class_by_name(const std::string& full_name);
   ClassContext* find_class_like(const std::string& symbol_name, const std::string& cpp_context);
 };

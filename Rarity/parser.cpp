@@ -126,6 +126,13 @@ RarityParser::ClassContext* RarityParser::find_class_for(CXCursor cursor)
   return it != classes.end() ? &(*it) : nullptr;
 }
 
+RarityParser::ClassContext* RarityParser::find_class_by_name(const std::string& full_name)
+{
+  auto it = std::find(classes.begin(), classes.end(), full_name);
+
+  return it != classes.end() ? &(*it) : nullptr;
+}
+
 RarityParser::ClassContext* RarityParser::find_class_like(const std::string& symbol_name, const std::string& cpp_context)
 {
   auto match = std::find(classes.begin(), classes.end(), cpp_context + "::" + symbol_name);
@@ -173,11 +180,13 @@ CXChildVisitResult RarityParser::visit_namespace(const std::string& symbol_name,
   {
     NamespaceContext ns_context;
 
-    ns_context.cursor = cursor;
+    ns_context.cursors.push_back(cursor);
     ns_context.ns.name = symbol_name;
     ns_context.ns.full_name = full_name;
     namespaces.push_back(ns_context);
   }
+  else
+    it->cursors.push_back(cursor);
   return CXChildVisit_Recurse;
 }
 
@@ -186,9 +195,10 @@ CXChildVisitResult RarityParser::visit_class(const std::string& symbol_name, CXC
   auto kind = clang_getCursorKind(cursor);
   ClassContext new_class;
   ClassContext* parent_class;
+  ClassContext* existing_class;
 
   new_class.klass.name = symbol_name;
-  new_class.cursor = cursor;
+  new_class.cursors.push_back(cursor);
   new_class.current_access = kind == CXCursor_StructDecl ? CX_CXXPublic : CX_CXXPrivate;
   if (parent.kind == CXCursor_TranslationUnit)
     new_class.klass.full_name = "::" + symbol_name;
@@ -210,8 +220,12 @@ CXChildVisitResult RarityParser::visit_class(const std::string& symbol_name, CXC
       return CXChildVisit_Continue;
     }
   }
-  if (has_class(new_class.klass.full_name))
+  existing_class = find_class_by_name(new_class.klass.full_name);
+  if (existing_class != nullptr)
+  {
+    existing_class->cursors.push_back(cursor);
     return CXChildVisit_Continue;
+  }
   classes.push_back(new_class);
   return CXChildVisit_Recurse;
 }
