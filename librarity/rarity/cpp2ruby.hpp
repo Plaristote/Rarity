@@ -90,7 +90,7 @@ namespace Ruby
       template<typename RET, typename... ARGS>
       static std::shared_ptr<IRarityClass> ruby_type(std::function<RET(ARGS...)> value)
       {
-        return Lambda::Factory<RET, ARGS...>::create(value);
+        return std::make_shared<Ruby::Lambda>(Lambda::Factory<RET, ARGS...>::create(value));
       }
     };
   }

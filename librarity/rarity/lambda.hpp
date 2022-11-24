@@ -6,7 +6,6 @@
 # include "exception.hpp"
 # include <functional>
 # include <memory>
-# include <iostream>
 
 namespace Ruby
 {
