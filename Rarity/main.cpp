@@ -55,6 +55,9 @@ int main(int ac, const char** av)
   {
     auto classes = parser.get_classes();
     auto nses    = parser.get_namespaces();
+    cout << "Bindings will be generated for the following classes:" << endl;
+    for (const auto& klass : classes)
+      cout << " - " << klass.full_name << endl;
     Renderer renderer(
       options.module_name,
       options.output_file,

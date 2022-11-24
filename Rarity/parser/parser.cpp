@@ -161,14 +161,7 @@ bool RarityParser::operator()(CXTranslationUnit& unit)
     &RarityParser::visitor_callback,
     nullptr
   );
-  if (!find_parsing_errors(unit))
-  {
-    cout << "Bindings will be generated for the following classes:" << endl;
-    for (const auto& klass : classes)
-      cout << " - " << klass.klass.full_name << endl;
-    return true;
-  }
-  return false;
+  return !find_parsing_errors(unit);
 }
 
 void RarityParser::register_type(const ClassContext& new_class)
