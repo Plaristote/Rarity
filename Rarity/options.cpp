@@ -1,5 +1,5 @@
 #include "options.hpp"
-#include "parser.hpp"
+#include "parser/parser.hpp"
 #include <iostream>
 
 using namespace std;

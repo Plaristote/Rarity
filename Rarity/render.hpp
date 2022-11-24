@@ -1,5 +1,5 @@
 #pragma once
-#include "definitions.hpp"
+#include "parser/definitions.hpp"
 #include <filesystem>
 #include <sstream>
 #include <fstream>
