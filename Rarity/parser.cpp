@@ -276,7 +276,7 @@ CXChildVisitResult RarityParser::visit_class(const std::string& symbol_name, CXC
   if (existing_class != nullptr)
   {
     existing_class->cursors.push_back(cursor);
-    return CXChildVisit_Continue;
+    return existing_class->klass.is_empty() ? CXChildVisit_Recurse : CXChildVisit_Continue;
   }
   register_type(new_class);
   return CXChildVisit_Recurse;

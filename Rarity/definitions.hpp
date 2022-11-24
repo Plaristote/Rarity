@@ -58,4 +58,5 @@ struct ClassDefinition : public NamespaceDefinition
   std::string                     cpp_base;
   std::optional<MethodDefinition> constructor;
   std::vector<MethodDefinition>   methods;
+  bool is_empty() const { return !constructor && methods.size() == 0; }
 };
