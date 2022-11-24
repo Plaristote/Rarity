@@ -266,7 +266,7 @@ void Renderer::generate_static_method_binding(const ClassDefinition& klass, cons
     << '{' << endl;
   source << "  ";
   if (method.return_type)
-    source << (*method.return_type) << " ret = ";
+    source << (method.return_type->to_string()) << " ret = ";
   source
     << klass.full_name << "::" << method.name
     << '(' << binding_params_apply(method) << ");" << endl
@@ -287,7 +287,7 @@ void Renderer::generate_method_binding(const ClassDefinition& klass, const Metho
     << binding_params_check(klass, method);
   source << "  ";
   if (method.return_type)
-    source << (*method.return_type) << " ret = ";
+    source << (method.return_type->to_string()) << " ret = ";
   source
     << "_this->" << method.name << '(' << binding_params_apply(method) << ");" << endl
     << "  return " << (method.return_type ? "::cpp_to_ruby(ret);" : "Qnil;") << endl

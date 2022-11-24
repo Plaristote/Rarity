@@ -187,8 +187,8 @@ CXChildVisitResult RarityParser::visit_typedef(const std::string& symbol_name, C
     TypeDefinition pointed_to;
     TypeDefinition explicit_from;
 
-    pointed_from.load_from(type);
-    pointed_to.load_from(typedefType);
+    pointed_from.load_from(type, types);
+    pointed_to.load_from(typedefType, types);
     explicit_from.name = pointed_from.name;
     for (const auto& part : Crails::split(*cpp_context, ':'))
       explicit_from.scopes.push_back(part);
@@ -203,11 +203,14 @@ CXChildVisitResult RarityParser::visit_typedef(const std::string& symbol_name, C
     {
       pointed_to.type_full_name = parent_type->type_full_name;
       pointed_to.is_const = pointed_to.is_const || parent_type->is_const;
-      pointed_to.is_pointer = pointed_to.is_pointer || parent_type->is_pointer;
-      pointed_to.is_reference = pointed_to.is_reference || parent_type->is_reference;
+      pointed_to.is_pointer += parent_type->is_pointer;
+      pointed_to.is_reference += parent_type->is_reference;
     }
     else
       pointed_to.type_full_name = cxStringToStdString(clang_getTypeSpelling(type));
+    pointed_to.is_const = pointed_to.is_const || pointed_from.is_const;
+    pointed_to.is_pointer += pointed_from.is_pointer;
+    pointed_to.is_reference += pointed_from.is_reference;
     types.push_back(pointed_to);
   }
   else
@@ -301,9 +304,13 @@ MethodDefinition RarityParser::visit_method(const std::string& symbol_name, CXCu
     new_method.return_type = ParamDefinition(return_type, types);
   for (int i = 0 ; (arg_type = clang_getArgType(method_type, i)).kind != 0 ; ++i)
     new_method.params.push_back(ParamDefinition(arg_type, types));
-  //cout << "  -> with method `" << new_method.name << "`\n";
-  //for (const auto& param : new_method.params)
-  //  cout << "    -> with param " << param << endl;
+  /*
+  cout << "  -> with method `" << new_method.name << "`\n";
+  if (new_method.return_type)
+    cout << "    -> with return type " << new_method.return_type->to_string() << endl;
+  for (const auto& param : new_method.params)
+    cout << "    -> with param " << param.to_string() << endl;
+  */
   return new_method;
 }
 

@@ -32,7 +32,7 @@ ParamDefinition::ParamDefinition(CXType type, const std::vector<TypeDefinition>&
     TypeDefinition param_type;
     optional<TypeDefinition> parent_type;
 
-    param_type.load_from(type);
+    param_type.load_from(type, known_types);
     parent_type = param_type.find_parent_type(known_types);
 
     if (parent_type)
@@ -43,6 +43,25 @@ ParamDefinition::ParamDefinition(CXType type, const std::vector<TypeDefinition>&
       is_pointer = param_type.is_pointer || parent_type->is_pointer;
     }
     else
+    {
+      is_const = param_type.is_const;
+      is_reference = param_type.is_reference;
+      is_pointer = param_type.is_pointer;
       append(Crails::join(param_type.scopes, "::") + "::" + param_type.name);
+    }
   }
+}
+
+std::string ParamDefinition::to_string() const
+{
+  string result;
+
+  if (is_const)
+    result += "const ";
+  result += *this;
+  if (is_pointer)
+    result += '*';
+  if (is_reference)
+    result += '&';
+  return result;
 }

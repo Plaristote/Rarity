@@ -6,17 +6,56 @@ using namespace std;
 
 string cxStringToStdString(const CXString&);
 
-TypeDefinition& TypeDefinition::load_from(CXType type)
+TypeDefinition& TypeDefinition::load_from(CXType type, const std::vector<TypeDefinition>& known_types)
 {
   string spelt = cxStringToStdString(clang_getTypeSpelling(type));
+
+  return load_from(spelt, known_types);
+}
+
+std::string parse_template_parameter(int& i, const std::string& src, const std::vector<TypeDefinition>& known_types)
+{
+  int template_depth = 1;
+  int start = ++i;
+  string         param_name;
+  TypeDefinition param_type;
+  optional<TypeDefinition> parent_type;
+
+  while (template_depth > 0 && i < src.length())
+  {
+    if (src[i] == '<')
+      template_depth++;
+    else if (src[i] == '>')
+      template_depth--;
+    i++;
+  }
+  param_name = src.substr(start, i - start - 1);
+  param_type.load_from(param_name, known_types);
+  parent_type = param_type.find_parent_type(known_types);
+  if (parent_type)
+  {
+    param_type.type_full_name = parent_type->type_full_name;
+    param_type.is_const = param_type.is_const || parent_type->is_const;
+    param_type.is_pointer = param_type.is_pointer || parent_type->is_pointer;
+    param_type.is_reference = param_type.is_reference || parent_type->is_reference;
+    return param_type.to_full_name();
+  }
+  return src.substr(start, i - start - 1);
+}
+
+TypeDefinition& TypeDefinition::load_from(const string& type, const vector<TypeDefinition>& known_types)
+{
+  string spelt = type;
   list<string> tokens;
+
+  raw_name = type;
 
   for (int i = spelt.size() - 1 ; i >= 0 ; --i)
   {
     if (spelt[i] == '*')
-      is_pointer = true;
+      is_pointer++;
     else if (spelt[i] == '&')
-      is_reference = true;
+      is_reference++;
     else if (spelt[i] != ' ')
     {
       spelt = spelt.substr(0, i + 1);
@@ -31,16 +70,16 @@ TypeDefinition& TypeDefinition::load_from(CXType type)
     spelt = Crails::join(++tokens.begin(), tokens.end(), ' ');
   }
 
-  short template_depth = 0;
   string part;
 
   for (int i = 0 ; i < spelt.length() ; ++i)
   {
     if (spelt[i] == '<')
-      template_depth++;
-    else if (spelt[i] == '>')
-      template_depth--;
-    if (spelt[i] == ':' && spelt[i + 1] == ':' && template_depth == 0)
+    {
+      part += '<' + parse_template_parameter(i, spelt, known_types) + '>';
+      continue ;
+    }
+    if (spelt[i] == ':' && spelt[i + 1] == ':')
     {
       scopes.push_back(part);
       part.clear();
@@ -94,4 +133,32 @@ std::string TypeDefinition::solve_type(const std::vector<TypeDefinition>& known_
   if (match)
     return match->type_full_name;
   return Crails::join(scopes, "") + "::" + name;
+}
+
+std::string TypeDefinition::to_string() const
+{
+  std::string result;
+
+  if (is_const)
+    result += "const ";
+  result += Crails::join(scopes, "::") + "::" + name;
+  for (int i = 0 ; i < is_pointer ; ++i)
+    result += '*';
+  for (int i = 0 ; i < is_reference ; ++i)
+    result += '&';
+  return result;
+}
+
+std::string TypeDefinition::to_full_name() const
+{
+  std::string result;
+
+  if (is_const)
+    result += "const ";
+  result += type_full_name;
+  for (int i = 0 ; i < is_pointer ; ++i)
+    result += '*';
+  for (int i = 0 ; i < is_reference ; ++i)
+    result += '&';
+  return result;
 }
