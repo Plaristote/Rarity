@@ -58,133 +58,46 @@ int main(int, char**)
 That was easy. How about loading a Ruby script ? Let's see how that goes:
 
 ```c++
-#include <rarity.hpp>
-#include <iostream>
-
-int main(int, char**)
-{
-  Rarity rarity; // Must be instantiated once and only once
-
-  try
-  {
-    Ruby::push_include_path(".");
-    Ruby::require("script.rb");
-  }
-  catch (const Ruby::Exception& e)
-  {
-    std::cerr << "Catched exception: " << e << std::endl;
-  }
-  return 0;
-}
+Ruby::push_include_path(".");
+Ruby::require("script.rb");
 ```
 
-Note that we added `try/catch` blocks in this example: uncaught Ruby exceptions will
-be thrown as C++ exception using the `Ruby::Exception` type.
-
-Those were the basics. Let's now see how to get handles to Ruby objects and
-interact with those:
+#### Interacting with Ruby objects from C++
+Let's see how to call a method on a Ruby object:
 
 ```c++
-#include <rarity.hpp>
-#include <iostream>
-
-int main(int, char**)
-{
-  Rarity rarity; // Must be instantiated once and only once
-
-  try
-  {
-    Ruby::Constant string_class("String");
-    Ruby::Object string_instance = string_class.apply("new");
-    std::string part1("Hello"), part2(", world!");
-
-    string_instance = string_instance.apply("+", 1, Ruby::to_ruby_type(part1).get());
-    string_instance = string_instance.apply("+", 1, Ruby::to_ruby_type(part2).get());
-    std::cout << "String: " << Ruby::inspect(string_instance) << std::endl;
-  }
-  catch (const std::exception& e)
-  {
-    std::cerr << "Catched exception: " << e.what() << std::endl;
-  }
-  return 0;
-}
+Ruby::Object number1 = Ruby::evaluate("42");
+Ruby::Object number2 = number.apply("+", 23);
 ```
 
-This example should display `String: "Hello, world!"` when executed. The following chapters
-will describe the use of the objects that were just introduced:
+The `apply` method calls a Ruby method which symbol is given as a first parameter (here we call the `+` method), and returns the result as a Ruby object. Parameters can be sent using any of the
+supported C++ type, instances of `Ruby::Object`, or pointers to a class implementing the `IRarityClass` interface.
 
-#### Ruby::Object
-`Ruby::Object` is used to interact with any Ruby object, allowing implicit conversion to any supported C++ type, and providing the `apply` method, which works similarly to the `send` method in Ruby.
+You may also use template parameters to have the `apply` method return a supported C++ type, such as:
 
-When sending parameters to a Ruby method via `apply`, we must first specify how many parameters will be sent, then we send pointers to Ruby objects:
 ```c++
-Ruby::Object string;
-
-string = Ruby::Constant("String").apply("new"); // calling a method with no arguments
-string = string.apply("+", 1, &string); // calling a method with a Ruby::Object
+int result = Ruby::evaluate("42").apply<int>("+", 23);
 ```
 
-Sometimes, you'll need to create Ruby objects from C++ ones on the fly. To that end, we use `Ruby::to_ruby_type`:
+#### Ruby wrappers
+librarity comes with a handful or wrappers designed to facilitate interaction with Ruby objects from C++. These types cover the 'Proc', `Array`, and `Hash`` Ruby classes.
+Check out their usages in the examples for [Proc](https://github.com/Plaristote/Rarity/tree/master/examples/05-lambda), [Array](https://github.com/Plaristote/Rarity/tree/master/examples/06-array), and [Hash](https://github.com/Plaristote/Rarity/tree/master/examples/07-hash).
 
+#### Converting from Ruby to C++ types
+librarity comes with 3 templates functions to help you convert types smoothly from one context to another:
+
+- `Ruby::to_cpp_type` takes a `Ruby::Object` as a parameter, and returns a C++ value as a result. You can use it like this:
 ```c++
-std::string cpp_string("Hello");
-std::shared_ptr<IRarityClass> string = Ruby::to_ruby_type(cpp_string);
-Ruby::Object(rb_cObject).apply("puts", 1, string.get());
+std::string native_string = Ruby::to_cpp_type<std::string>(ruby_string)
 ```
-
-On the other hand, `Ruby::Object` can be implicitely casted to any supported C++ type (see [Natively supporteed type](#Natively_supported_types)), such as:
-
+- `Ruby::as_cpp_type` is similar to `to_cpp_type`, but it's safer to use: while `to_cpp_type` will crash when the requested C++ type doesn't match the Ruby value's class, `as_cpp_type` will first convert the Ruby value to an acceptable form. For instance:
 ```c++
-Ruby::Object result = Ruby::Constant("String").apply("new");
-std::string str = result; // implicit cast to std::string
+std::string recipe_for_disaster = Ruby::to_cpp_type<std::string>(Ruby::evaluate("42")); // won't work
+std::string recipe_for_success = Ruby::as_cpp_type<std::string>(Ruby::evaluate("42")); // will work
 ```
-
-#### Ruby::Constant
-`Ruby::Constant` implements `Ruby::Object`, and allows you to quickly get a hold of a constant, such as a class object, a module. By default, constants are looked up in Ruby's global object, but you can also specify in which module you wish to look for a constant:
-
+- `Ruby::to_ruby_type` takes a C++ value and returns `std::shared_ptr<IRarityClass>`. You can then convert that result to `Ruby::Object` using the `IRarityClass::ruby_instance` method, such as:
 ```c++
-Ruby::require("net/http");
-Ruby::Object net = Ruby::Constant("Net");
-Ruby::Object http = Ruby::Constant("HTTP", net);
-std::string domain("example.com"), path("/index.html");
-Ruby::Object response = http.apply("get",
-  Ruby::to_ruby_type(domain).get(),
-  Ruby::to_ruby_type(path).get()
-);
-
-std::cout << (std::string)(response) << std::endl;
-```
-
-#### Ruby::Lambda
-librarity also allows you to invoke Ruby's `Proc` objects from C++,
-using the `Ruby::Lambda` object. Let's see how that works:
-
-```c++
-Ruby::Lambda lambda = Ruby::evaluate(
-  "Proc.new { |param| puts \"Ruby lambda says: #{param.inspect}\" }"
-);
-
-lambda.call<void, std::string>("Hello, world !");
-```
-
-In this example, we used `call` to invoke the `Proc` object as if it were
-a C++ function. We used template parameters to hint that the return type
-would be `void`, and that we would send one paramter with the `std::string`
-type.
-
-We could've also used any other type supported by Rarity:
-
-```c++
-lambda.call<void, int>(42);
-```
-
-On top of that, if you do not wish to invoke the encapsulated code right
-away, you may also get a hold of it as an instance of `std::function`:
-
-```c++
-std::function<void (std::string)> callback = lambda.as_function<void, std::string>();
-
-callback("Hello, world !");
+Ruby::Object object = Ruby::to_ruby_type<std::string>("Hello, world")->ruby_instance()
 ```
 
 ## C++ to Ruby bindings
