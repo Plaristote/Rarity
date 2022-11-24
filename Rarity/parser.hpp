@@ -39,6 +39,7 @@ class RarityParser
   };
 
   std::vector<std::string>      directories;
+  std::vector<TypeDefinition>   types;
   std::vector<ClassContext>     classes;
   std::vector<NamespaceContext> namespaces;
   NamespaceContext              current_ns;
@@ -68,9 +69,12 @@ private:
   MethodDefinition   visit_method(const std::string& symbol_name, CXCursor parent);
   void               visit_base_class(ClassContext& class_context, const std::string& symbol_name);
   CXChildVisitResult visit_namespace(const std::string& symbol_name, CXCursor parent);
+  CXChildVisitResult visit_typedef(const std::string& symbol_name, CXCursor parent);
 
   std::optional<std::string> fullname_for(CXCursor) const;
   ClassContext* find_class_for(CXCursor);
   ClassContext* find_class_by_name(const std::string& full_name);
   ClassContext* find_class_like(const std::string& symbol_name, const std::string& cpp_context);
+
+  void register_type(const ClassContext&);
 };

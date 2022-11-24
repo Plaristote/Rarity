@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 #include <crails/utils/split.hpp>
+#include <crails/utils/join.hpp>
 
 using namespace std;
 
@@ -170,6 +171,57 @@ bool RarityParser::operator()(CXTranslationUnit& unit)
   return false;
 }
 
+void RarityParser::register_type(const ClassContext& new_class)
+{
+  TypeDefinition type_definition;
+
+  type_definition.name = new_class.klass.name;
+  type_definition.scopes = Crails::split<std::string, std::vector<std::string>>(new_class.klass.cpp_context(), ':');
+  type_definition.type_full_name = new_class.klass.full_name;
+  types.push_back(type_definition);
+  classes.push_back(new_class);
+}
+
+CXChildVisitResult RarityParser::visit_typedef(const std::string& symbol_name, CXCursor parent)
+{
+  auto cpp_context = fullname_for(parent);
+
+  if (cpp_context)
+  {
+    CXType typedefType = clang_getCursorType(cursor);
+    CXType type = clang_getTypedefDeclUnderlyingType(cursor);
+    TypeDefinition pointed_from;
+    TypeDefinition pointed_to;
+    TypeDefinition explicit_from;
+
+    pointed_from.load_from(type);
+    pointed_to.load_from(typedefType);
+    explicit_from.name = pointed_from.name;
+    for (const auto& part : Crails::split(*cpp_context, ':'))
+      explicit_from.scopes.push_back(part);
+    for (const auto& part : pointed_from.scopes)
+      explicit_from.scopes.push_back(part);
+
+    optional<TypeDefinition> parent_type = explicit_from.find_parent_type(types);
+
+    if (!parent_type)
+      parent_type = pointed_from.find_parent_type(types);
+    if (parent_type)
+    {
+      pointed_to.type_full_name = parent_type->type_full_name;
+      pointed_to.is_const = pointed_to.is_const || parent_type->is_const;
+      pointed_to.is_pointer = pointed_to.is_pointer || parent_type->is_pointer;
+      pointed_to.is_reference = pointed_to.is_reference || parent_type->is_reference;
+    }
+    else
+      pointed_to.type_full_name = cxStringToStdString(clang_getTypeSpelling(type));
+    types.push_back(pointed_to);
+  }
+  else
+    cerr << "(i) Could not solve typedef " << symbol_name << endl;
+  return CXChildVisit_Continue;
+}
+
 CXChildVisitResult RarityParser::visit_namespace(const std::string& symbol_name, CXCursor parent)
 {
   auto base_name = fullname_for(parent);
@@ -226,7 +278,7 @@ CXChildVisitResult RarityParser::visit_class(const std::string& symbol_name, CXC
     existing_class->cursors.push_back(cursor);
     return CXChildVisit_Continue;
   }
-  classes.push_back(new_class);
+  register_type(new_class);
   return CXChildVisit_Recurse;
 }
 
@@ -253,9 +305,9 @@ MethodDefinition RarityParser::visit_method(const std::string& symbol_name, CXCu
   new_method.name = symbol_name;
   new_method.is_static = clang_CXXMethod_isStatic(cursor);
   if (return_type.kind != 0 && return_type.kind != CXType_Void)
-    new_method.return_type = ParamDefinition(return_type);
+    new_method.return_type = ParamDefinition(return_type, types);
   for (int i = 0 ; (arg_type = clang_getArgType(method_type, i)).kind != 0 ; ++i)
-    new_method.params.push_back(ParamDefinition(arg_type));
+    new_method.params.push_back(ParamDefinition(arg_type, types));
   //cout << "  -> with method `" << new_method.name << "`\n";
   //for (const auto& param : new_method.params)
   //  cout << "    -> with param " << param << endl;
@@ -271,7 +323,9 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
 
     if (kind == CXCursor_Namespace)
       return visit_namespace(symbol_name, parent);
-    if (kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)
+    else if (kind == CXCursor_TypedefDecl)
+      return visit_typedef(symbol_name, parent);
+    else if (kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)
       return visit_class(symbol_name, parent);
     else
     {
