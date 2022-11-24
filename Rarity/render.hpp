@@ -11,6 +11,7 @@ class Renderer
   const std::vector<std::filesystem::path>& files;
   const std::vector<ClassDefinition>& classes;
   const std::vector<NamespaceDefinition>& namespaces;
+  const std::vector<FunctionDefinition>& functions;
   std::ofstream source;
   std::string initializer_name;
 public:
@@ -19,8 +20,9 @@ public:
     const std::filesystem::path& target,
     const std::vector<std::filesystem::path>& files,
     const std::vector<ClassDefinition>& a,
-    const std::vector<NamespaceDefinition>& b
-  ) : module_name(module_name), target(target), files(files), classes(a), namespaces(b), source(target.string().c_str())
+    const std::vector<NamespaceDefinition>& b,
+    const std::vector<FunctionDefinition>& c
+  ) : module_name(module_name), target(target), files(files), classes(a), namespaces(b), functions(c), source(target.string().c_str())
   {
     initializer_name = "initialize_rarity_bindings";
   }
@@ -38,6 +40,7 @@ private:
   void generate_constructor_binding(const ClassDefinition&, const MethodDefinition&);
   void generate_static_method_binding(const ClassDefinition&, const MethodDefinition&);
   void generate_method_binding(const ClassDefinition&, const MethodDefinition&);
+  void generate_function_binding(const FunctionDefinition&);
 
   std::string ruby_class_getter(const ClassDefinition&);
 };

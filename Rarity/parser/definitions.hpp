@@ -36,15 +36,30 @@ struct ParamDefinition : public std::string
   std::string to_string() const;
 };
 
-struct MethodDefinition
+struct InvokableDefinition
+{
+  std::optional<ParamDefinition> return_type;
+  std::vector<ParamDefinition>   params;
+};
+
+struct MethodDefinition : public InvokableDefinition
 {
   bool                           is_static;
   std::string                    name;
-  std::optional<ParamDefinition> return_type;
-  std::vector<ParamDefinition>   params;
 
   std::string binding_name() const;
   std::string ruby_name() const;
+};
+
+struct FunctionDefinition : public InvokableDefinition
+{
+  std::string                    name;
+  std::string                    full_name;
+
+  std::string binding_name() const;
+  std::string ruby_name() const;
+  std::string cpp_context() const;
+  std::string ruby_context() const;
 };
 
 struct NamespaceDefinition

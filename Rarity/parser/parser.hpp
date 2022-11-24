@@ -38,13 +38,14 @@ class RarityParser
     }
   };
 
-  std::vector<std::string>      directories;
-  std::vector<TypeDefinition>   types;
-  std::vector<ClassContext>     classes;
-  std::vector<NamespaceContext> namespaces;
-  NamespaceContext              current_ns;
-  NamespaceDefinition           root_ns;
-  CXCursor                      cursor;
+  std::vector<std::string>        directories;
+  std::vector<TypeDefinition>     types;
+  std::vector<ClassContext>       classes;
+  std::vector<NamespaceContext>   namespaces;
+  std::vector<FunctionDefinition> functions;
+  NamespaceContext                current_ns;
+  NamespaceDefinition             root_ns;
+  CXCursor                        cursor;
 public:
   RarityParser();
   RarityParser(const RarityParser&) = delete;
@@ -55,6 +56,7 @@ public:
   const std::vector<std::string>& get_directories() const { return directories; }
   std::vector<ClassDefinition> get_classes() const;
   std::vector<NamespaceDefinition> get_namespaces() const;
+  std::vector<FunctionDefinition> get_functions() const { return functions; }
 
   std::filesystem::path get_current_path() const;
   bool                  is_included(const std::filesystem::path& path) const;
@@ -70,6 +72,7 @@ private:
   void               visit_base_class(ClassContext& class_context, const std::string& symbol_name);
   CXChildVisitResult visit_namespace(const std::string& symbol_name, CXCursor parent);
   CXChildVisitResult visit_typedef(const std::string& symbol_name, CXCursor parent);
+  FunctionDefinition visit_function(const std::string& symbol_name, CXCursor parent);
 
   std::optional<std::string> fullname_for(CXCursor) const;
   ClassContext* find_class_for(CXCursor);

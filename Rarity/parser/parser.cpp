@@ -314,6 +314,26 @@ MethodDefinition RarityParser::visit_method(const std::string& symbol_name, CXCu
   return new_method;
 }
 
+FunctionDefinition RarityParser::visit_function(const std::string& symbol_name, CXCursor parent)
+{
+  FunctionDefinition new_func;
+  CXType method_type = clang_getCursorType(cursor);
+  CXType return_type = clang_getResultType(method_type);
+  CXType arg_type;
+  auto context_name = fullname_for(parent);
+
+  new_func.name = symbol_name;
+  if (context_name)
+    new_func.full_name = *context_name + "::" + new_func.name;
+  else
+    new_func.full_name = "::" + new_func.name;
+  if (return_type.kind != 0 && return_type.kind != CXType_Void)
+    new_func.return_type = ParamDefinition(return_type, types);
+  for (int i = 0 ; (arg_type = clang_getArgType(method_type, i)).kind != 0 ; ++i)
+    new_func.params.push_back(ParamDefinition(arg_type, types));
+  return new_func;
+}
+
 CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
 {
   if (is_included(get_current_path()))
@@ -330,7 +350,7 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
     else if (kind == CXCursor_ClassTemplate)
       return CXChildVisit_Continue; // TODO implement template class support
     else if (kind == CXCursor_FunctionDecl)
-      return CXChildVisit_Continue; // TODO implement function support
+      functions.push_back(visit_function(symbol_name, parent));
     else if (kind == CXCursor_FunctionTemplate)
       return CXChildVisit_Continue; // TODO implement function template support
     else

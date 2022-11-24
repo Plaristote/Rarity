@@ -56,10 +56,8 @@ void Renderer::generate_cpp_to_ruby_template()
     << '}' << endl;
 }
 
-static std::string wrapper_getter(const NamespaceDefinition& klass, bool include_name = false)
+static std::string wrapper_getter(std::list<std::string> parts, bool include_name = false)
 {
-  auto parts = Crails::split(klass.ruby_context(), ':');
-
   if (parts.size() > 0)
   {
     stringstream stream;
@@ -80,6 +78,11 @@ static std::string wrapper_getter(const NamespaceDefinition& klass, bool include
   return "wrapping_module";
 }
 
+static std::string wrapper_getter(const NamespaceDefinition& klass, bool include_name = false)
+{
+  return wrapper_getter(Crails::split(klass.ruby_context(), ':'), include_name);
+}
+
 static std::string inherits_getter(const ClassDefinition& klass)
 {
   if (klass.cpp_base.length() > 0)
@@ -92,6 +95,8 @@ void Renderer::generate_classes_bindings()
   source << "typedef VALUE (*RubyMethod)(...);" << endl << endl;
   for (const auto& klass : classes)
     generate_class_bindings(klass);
+  for (const auto& func : functions)
+    generate_function_binding(func);
   source
     << "void " << initializer_name << "(void)" << endl
     << '{' << endl;
@@ -103,6 +108,14 @@ void Renderer::generate_classes_bindings()
     source << "  rb_define_module_under(" << wrapper_getter(ns, true) << ", \"" << Crails::camelize(ns.name, Crails::UpperCamelcase) << "\");" << endl;
   for (const auto& klass : classes)
     source << "  initialize_" << klass.binding_name() << "();" << endl;
+  for (const auto& func : functions)
+  {
+    source
+      << "  rb_define_module_function("
+      << wrapper_getter(Crails::split(func.ruby_context(), ':'), false)
+      << ", \"" << func.ruby_name() << "\", reinterpret_cast<RubyMethod>(binding_" << func.binding_name() << "), " << func.params.size() << ");"
+      << endl;
+  }
   source << '}' << endl;
 }
 
@@ -145,7 +158,7 @@ void Renderer::generate_class_bindings(const ClassDefinition& klass)
   source << '}' << endl;
 }
 
-static std::string binding_params_for(const MethodDefinition& method)
+static std::string binding_params_for(const InvokableDefinition& method)
 {
   stringstream stream;
 
@@ -154,7 +167,7 @@ static std::string binding_params_for(const MethodDefinition& method)
   return stream.str();
 }
 
-static std::string binding_params_apply(const MethodDefinition& method)
+static std::string binding_params_apply(const InvokableDefinition& method)
 {
   stringstream stream;
 
@@ -180,7 +193,7 @@ std::map<std::string, std::vector<std::string>> cpp_to_ruby_types{
   {"Float",   {"float", "double", "long double"}}
 };
 
-static std::string binding_params_check(const ClassDefinition& klass, const MethodDefinition& method)
+static std::string binding_params_check(const InvokableDefinition& method, const std::string& fullname)
 {
   stringstream stream;
 
@@ -190,7 +203,7 @@ static std::string binding_params_check(const ClassDefinition& klass, const Meth
     string expected_ruby_type = param;
     stringstream message;
 
-    message << "Mismatched type in " << klass.name << "::" << method.name << ", argument " << (i + 1) << ". "; 
+    message << "Mismatched type in " << fullname << ", argument " << (i + 1) << ". ";
     if (param == "char" && param.is_pointer && param.is_const)
       expected_ruby_type = "String";
     else if (param.find("function<") != string::npos)
@@ -284,12 +297,29 @@ void Renderer::generate_method_binding(const ClassDefinition& klass, const Metho
     << "  long _ptr = Ruby::get_instance_pointer(self);" << endl
     << "  auto* _this = reinterpret_cast<" << klass.full_name << "*>(_ptr);" << endl
     << endl
-    << binding_params_check(klass, method);
+    << binding_params_check(method, klass.full_name + "::" + method.name);
   source << "  ";
   if (method.return_type)
     source << (method.return_type->to_string()) << " ret = ";
   source
     << "_this->" << method.name << '(' << binding_params_apply(method) << ");" << endl
     << "  return " << (method.return_type ? "::cpp_to_ruby(ret);" : "Qnil;") << endl
+    << '}' << endl;
+}
+
+void Renderer::generate_function_binding(const FunctionDefinition& func)
+{
+  source
+    << "static VALUE binding_"
+    << func.binding_name() << '('
+    << "VALUE self" << binding_params_for(func) << ')' << endl
+    << '{' << endl
+    << binding_params_check(func, func.full_name)
+    << "  ";
+  if (func.return_type)
+    source << (func.return_type->to_string()) << " ret = ";
+  source
+    << func.full_name << '(' << binding_params_apply(func) << ");" << endl
+    << "  return " << (func.return_type ? "::cpp_to_ruby(ret);" : "Qnil;") << endl
     << '}' << endl;
 }
