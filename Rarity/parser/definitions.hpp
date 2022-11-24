@@ -30,8 +30,8 @@ struct ParamDefinition : public std::string
   ParamDefinition(const std::string& name) : std::string(name) {}
 
   bool is_const     = false;
-  bool is_reference = false;
-  bool is_pointer   = false;
+  int  is_reference = 0;
+  int  is_pointer   = 0;
 
   std::string to_string() const;
 };

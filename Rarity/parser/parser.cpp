@@ -327,6 +327,12 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
       return visit_typedef(symbol_name, parent);
     else if (kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)
       return visit_class(symbol_name, parent);
+    else if (kind == CXCursor_ClassTemplate)
+      return CXChildVisit_Continue; // TODO implement template class support
+    else if (kind == CXCursor_FunctionDecl)
+      return CXChildVisit_Continue; // TODO implement function support
+    else if (kind == CXCursor_FunctionTemplate)
+      return CXChildVisit_Continue; // TODO implement function template support
     else
     {
       ClassContext* current_class = find_class_for(parent);
