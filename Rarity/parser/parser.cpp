@@ -286,12 +286,18 @@ void RarityParser::visit_base_class(ClassContext& current_class, const std::stri
   ClassContext* base_class = find_class_like(symbol_name, current_class.klass.full_name);
 
   if (base_class)
-    current_class.klass.cpp_base = base_class->klass.full_name;
+  {
+    current_class.klass.bases.push_back(base_class->klass.full_name);
+    current_class.klass.known_bases.push_back(base_class->klass.full_name);
+  }
   else
+  {
+    current_class.klass.bases.push_back(symbol_name);
     cout << "(i) " << current_class.klass.full_name << " base class " << symbol_name << " cannot be solved" << endl;
+  }
 }
 
-MethodDefinition RarityParser::visit_method(const std::string& symbol_name, CXCursor)
+MethodDefinition RarityParser::create_method(const std::string& symbol_name, CXCursor)
 {
   MethodDefinition new_method;
   CXType method_type = clang_getCursorType(cursor);
@@ -314,6 +320,35 @@ MethodDefinition RarityParser::visit_method(const std::string& symbol_name, CXCu
   return new_method;
 }
 
+CXChildVisitResult RarityParser::visit_method(ClassContext& current_class, const string& symbol_name, CXCursor parent)
+{
+  auto kind = clang_getCursorKind(cursor);
+  auto method = create_method(symbol_name, parent);
+  auto& list = kind == CXCursor_Constructor
+    ? current_class.klass.constructors
+    : current_class.klass.methods;
+
+  switch (current_class.current_access)
+  {
+    default:
+      method.visibility = "public";
+      break ;
+    case CX_CXXProtected:
+      method.visibility = "protected";
+      break ;
+    case CX_CXXPrivate:
+      method.visibility = "private";
+      break ;
+  }
+  list.push_back(method);
+  if (clang_getCursorKind(cursor) == CXCursor_FunctionTemplate)
+  {
+    function_template_context = &(*list.rbegin());
+    return CXChildVisit_Recurse;
+  }
+  return CXChildVisit_Continue;
+}
+
 FunctionDefinition RarityParser::visit_function(const std::string& symbol_name, CXCursor parent)
 {
   FunctionDefinition new_func;
@@ -334,6 +369,31 @@ FunctionDefinition RarityParser::visit_function(const std::string& symbol_name, 
   return new_func;
 }
 
+CXChildVisitResult RarityParser::visit_template_parameter(ClassContext& class_context, const string& symbol_name)
+{
+  class_template_context = &class_context;
+  class_context.klass.template_parameters.push_back({
+    "typename",
+    symbol_name
+  });
+  return CXChildVisit_Continue;
+}
+
+std::string RarityParser::solve_typeref()
+{
+  TypeDefinition type;
+
+  type.load_from(clang_getCursorType(cursor), types);
+  return type.solve_type(types);
+}
+
+CXChildVisitResult RarityParser::visit_template_default_value(const string& symbol_name)
+{
+  class_template_context->klass.template_parameters.rbegin()
+    ->default_value = solve_typeref();
+  return CXChildVisit_Continue;
+}
+
 CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
 {
   if (is_included(get_current_path()))
@@ -341,18 +401,44 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
     auto kind = clang_getCursorKind(cursor);
     string symbol_name = cxStringToStdString(clang_getCursorSpelling(cursor));
 
+    //cout << "Decl: " << clang_getCursorKindSpelling(clang_getCursorKind(cursor)) << " -> " <<  symbol_name << endl;
+    if (class_template_context)
+    {
+      if (kind == CXCursor_TypeRef)
+        visit_template_default_value(symbol_name);
+      class_template_context = nullptr;
+    }
+    if (function_template_context)
+    {
+      switch (kind)
+      {
+        case CXCursor_TemplateTypeParameter:
+          function_template_context->template_parameters.push_back({"typename", symbol_name});
+          break ;
+        case CXCursor_TypeRef:
+          function_template_context->template_parameters.rbegin()->default_value = solve_typeref();
+          break ;
+        case CXCursor_NamespaceRef:
+          break ;
+        default:
+          function_template_context = nullptr;
+          break ;
+      }
+    }
     if (kind == CXCursor_Namespace)
       return visit_namespace(symbol_name, parent);
     else if (kind == CXCursor_TypedefDecl)
       return visit_typedef(symbol_name, parent);
-    else if (kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl)
+    else if (kind == CXCursor_StructDecl || kind == CXCursor_ClassDecl || kind == CXCursor_ClassTemplate)
       return visit_class(symbol_name, parent);
     else if (kind == CXCursor_ClassTemplate)
-      return CXChildVisit_Continue; // TODO implement template class support
-    else if (kind == CXCursor_FunctionDecl)
       functions.push_back(visit_function(symbol_name, parent));
     else if (kind == CXCursor_FunctionTemplate)
-      return CXChildVisit_Continue; // TODO implement function template support
+    {
+      functions.push_back(visit_function(symbol_name, parent));
+      function_template_context = &(*functions.rbegin());
+      return CXChildVisit_Recurse; // TODO implement function template support
+    }
     else
     {
       ClassContext* current_class = find_class_for(parent);
@@ -361,6 +447,9 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
       {
         switch (kind)
         {
+        case CXCursor_TemplateTypeParameter:
+          visit_template_parameter(*current_class, symbol_name);
+          break ;
         case CXCursor_CXXBaseSpecifier:
           visit_base_class(*current_class, symbol_name);
           break ;
@@ -368,13 +457,10 @@ CXChildVisitResult RarityParser::visitor(CXCursor parent, CXClientData)
           current_class->current_access = clang_getCXXAccessSpecifier(cursor);
           break ;
         case CXCursor_CXXMethod:
-          if (current_class->current_access == CX_CXXPublic)
-            current_class->klass.methods.push_back(visit_method(symbol_name, parent));
-          return CXChildVisit_Continue;
+        case CXCursor_FunctionTemplate:
+          return visit_method(*current_class, symbol_name, parent);
         case CXCursor_Constructor:
-          if (!current_class->klass.constructor && current_class->current_access == CX_CXXPublic)
-            current_class->klass.constructor = visit_method(symbol_name, parent);
-          return CXChildVisit_Continue;
+          return visit_method(*current_class, symbol_name, parent);
         default:
           //cout << "  Unhandled decl: " << clang_getCursorKindSpelling(clang_getCursorKind(cursor)) << " -> " <<  symbol_name << endl;
           break ;

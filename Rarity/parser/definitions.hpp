@@ -4,6 +4,15 @@
 #include <vector>
 #include <clang-c/Index.h>
 
+struct TemplateParameter
+{
+  std::string type;
+  std::string name;
+  std::string default_value;
+};
+
+typedef std::vector<TemplateParameter> TemplateParameters;
+
 struct TypeDefinition
 {
   std::string              raw_name;
@@ -40,12 +49,15 @@ struct InvokableDefinition
 {
   std::optional<ParamDefinition> return_type;
   std::vector<ParamDefinition>   params;
+  TemplateParameters template_parameters;
+  bool is_template() const { return template_parameters.size() > 0; }
 };
 
 struct MethodDefinition : public InvokableDefinition
 {
-  bool                           is_static;
-  std::string                    name;
+  bool               is_static;
+  std::string        name;
+  std::string        visibility;
 
   std::string binding_name() const;
   std::string ruby_name() const;
@@ -53,8 +65,8 @@ struct MethodDefinition : public InvokableDefinition
 
 struct FunctionDefinition : public InvokableDefinition
 {
-  std::string                    name;
-  std::string                    full_name;
+  std::string        name;
+  std::string        full_name;
 
   std::string binding_name() const;
   std::string ruby_name() const;
@@ -76,8 +88,11 @@ struct NamespaceDefinition
 
 struct ClassDefinition : public NamespaceDefinition
 {
-  std::string                     cpp_base;
-  std::optional<MethodDefinition> constructor;
+  std::vector<std::string>        bases;
+  std::vector<std::string>        known_bases;
+  std::vector<MethodDefinition>   constructors;
   std::vector<MethodDefinition>   methods;
-  bool is_empty() const { return !constructor && methods.size() == 0; }
+  TemplateParameters              template_parameters;
+  bool is_empty() const { return constructors.size() + methods.size() == 0; }
+  bool is_template() const { return template_parameters.size() > 0; }
 };

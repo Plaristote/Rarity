@@ -85,8 +85,8 @@ static std::string wrapper_getter(const NamespaceDefinition& klass, bool include
 
 static std::string inherits_getter(const ClassDefinition& klass)
 {
-  if (klass.cpp_base.length() > 0)
-    return "RarityClass::ruby_class_for<" + klass.cpp_base + ">()";
+  if (klass.known_bases.size() > 0)
+    return "RarityClass::ruby_class_for<" + *klass.known_bases.begin() + ">()";
   return "rb_cObject";
 }
 
@@ -94,9 +94,15 @@ void Renderer::generate_classes_bindings()
 {
   source << "typedef VALUE (*RubyMethod)(...);" << endl << endl;
   for (const auto& klass : classes)
+  {
+    if (klass.is_template()) continue ;
     generate_class_bindings(klass);
+  }
   for (const auto& func : functions)
+  {
+    if (func.is_template()) continue ;
     generate_function_binding(func);
+  }
   source
     << "void " << initializer_name << "(void)" << endl
     << '{' << endl;
@@ -107,9 +113,13 @@ void Renderer::generate_classes_bindings()
   for (const auto& ns : namespaces)
     source << "  rb_define_module_under(" << wrapper_getter(ns, true) << ", \"" << Crails::camelize(ns.name, Crails::UpperCamelcase) << "\");" << endl;
   for (const auto& klass : classes)
+  {
+    if (klass.is_template()) continue ;
     source << "  initialize_" << klass.binding_name() << "();" << endl;
+  }
   for (const auto& func : functions)
   {
+    if (func.is_template()) continue ;
     source
       << "  rb_define_module_function("
       << wrapper_getter(Crails::split(func.ruby_context(), ':'), false)
@@ -121,11 +131,21 @@ void Renderer::generate_classes_bindings()
 
 void Renderer::generate_class_bindings(const ClassDefinition& klass)
 {
-  if (klass.constructor)
-    generate_constructor_binding(klass, *klass.constructor);
+  const MethodDefinition* constructor = nullptr;
+
+  for (const auto& candidate : klass.constructors)
+  {
+    if (candidate.visibility == "public" && !candidate.is_template())
+    {
+      constructor = &candidate;
+      generate_constructor_binding(klass, *constructor);
+      break ;
+    }
+  }
   for (const auto& method : klass.methods)
   {
-    if (method.is_static)
+    if (method.is_template() || method.visibility != "public");
+    else if (method.is_static)
       generate_static_method_binding(klass, method);
     else
       generate_method_binding(klass, method);
@@ -144,8 +164,8 @@ void Renderer::generate_class_bindings(const ClassDefinition& klass)
     << "  RarityClass::register_ruby_class_for<" << klass.full_name << ">(klass);" << endl
     << "  rb_define_method(klass, \"_initialize\", reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << "__initialize), 0);" << endl
     << "  rb_define_module_function(klass, \"finalize\", reinterpret_cast<RubyMethod>(Ruby::finalize_rarity_class), 1);" << endl;
-  if (klass.constructor)
-    source << "  rb_define_method(klass, \"initialize\", reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << '_' << klass.constructor->binding_name() << "), " << klass.constructor->params.size() << ");" << endl;
+  if (constructor)
+    source << "  rb_define_method(klass, \"initialize\", reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << '_' << constructor->binding_name() << "), " << constructor->params.size() << ");" << endl;
   for (const auto& method : klass.methods)
   {
     source

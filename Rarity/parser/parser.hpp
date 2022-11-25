@@ -46,6 +46,8 @@ class RarityParser
   NamespaceContext                current_ns;
   NamespaceDefinition             root_ns;
   CXCursor                        cursor;
+  ClassContext*                   class_template_context = nullptr;
+  InvokableDefinition*            function_template_context = nullptr;
 public:
   RarityParser();
   RarityParser(const RarityParser&) = delete;
@@ -56,7 +58,8 @@ public:
   const std::vector<std::string>& get_directories() const { return directories; }
   std::vector<ClassDefinition> get_classes() const;
   std::vector<NamespaceDefinition> get_namespaces() const;
-  std::vector<FunctionDefinition> get_functions() const { return functions; }
+  const std::vector<FunctionDefinition>& get_functions() const { return functions; }
+  const std::vector<TypeDefinition>& get_types() const { return types; }
 
   std::filesystem::path get_current_path() const;
   bool                  is_included(const std::filesystem::path& path) const;
@@ -68,7 +71,9 @@ private:
 
   CXChildVisitResult visitor(CXCursor parent, CXClientData clientData);
   CXChildVisitResult visit_class(const std::string& symbol_name, CXCursor parent);
-  MethodDefinition   visit_method(const std::string& symbol_name, CXCursor parent);
+  CXChildVisitResult visit_template_parameter(ClassContext& class_context, const std::string& symbol_name);
+  CXChildVisitResult visit_template_default_value(const std::string& symbol_name);
+  CXChildVisitResult visit_method(ClassContext& class_context, const std::string& symbol_name, CXCursor parent);
   void               visit_base_class(ClassContext& class_context, const std::string& symbol_name);
   CXChildVisitResult visit_namespace(const std::string& symbol_name, CXCursor parent);
   CXChildVisitResult visit_typedef(const std::string& symbol_name, CXCursor parent);
@@ -79,5 +84,7 @@ private:
   ClassContext* find_class_by_name(const std::string& full_name);
   ClassContext* find_class_like(const std::string& symbol_name, const std::string& cpp_context);
 
+  MethodDefinition create_method(const std::string& symbol_name, CXCursor parent);
   void register_type(const ClassContext&);
+  std::string solve_typeref();
 };
