@@ -1,5 +1,6 @@
 #include "render.hpp"
-#include "parser/parser.hpp"
+#include <libtwili/parser.hpp>
+#include "helpers/definitions.hpp"
 #include <fstream>
 #include <map>
 #include <algorithm>
@@ -14,8 +15,8 @@ string Renderer::ruby_class_getter(const ClassDefinition& klass)
   string result;
 
   if (module_name.length())
-    return module_name + klass.ruby_name();
-  return klass.ruby_name();
+    return module_name + ruby_name(klass);
+  return ruby_name(klass);
 }
 
 void Renderer::render()
@@ -80,7 +81,7 @@ static std::string wrapper_getter(std::list<std::string> parts, bool include_nam
 
 static std::string wrapper_getter(const NamespaceDefinition& klass, bool include_name = false)
 {
-  return wrapper_getter(Crails::split(klass.ruby_context(), ':'), include_name);
+  return wrapper_getter(Crails::split(ruby_context(klass), ':'), include_name);
 }
 
 static std::string inherits_getter(const ClassDefinition& klass)
@@ -115,15 +116,15 @@ void Renderer::generate_classes_bindings()
   for (const auto& klass : classes)
   {
     if (klass.is_template() || is_interface(klass)) continue ;
-    source << "  initialize_" << klass.binding_name() << "();" << endl;
+    source << "  initialize_" << binding_name(klass) << "();" << endl;
   }
   for (const auto& func : functions)
   {
     if (func.is_template()) continue ;
     source
       << "  rb_define_module_function("
-      << wrapper_getter(Crails::split(func.ruby_context(), ':'), false)
-      << ", \"" << func.ruby_name() << "\", reinterpret_cast<RubyMethod>(binding_" << func.binding_name() << "), " << func.params.size() << ");"
+      << wrapper_getter(Crails::split(ruby_context(func), ':'), false)
+      << ", \"" << ruby_name(func) << "\", reinterpret_cast<RubyMethod>(binding_" << binding_name(func) << "), " << func.params.size() << ");"
       << endl;
   }
   source << '}' << endl;
@@ -151,27 +152,27 @@ void Renderer::generate_class_bindings(const ClassDefinition& klass)
       generate_method_binding(klass, method);
   }
   source
-    << "static VALUE binding_" << klass.binding_name() << "__initialize(VALUE self) { return Qnil; }" << endl;
+    << "static VALUE binding_" << binding_name(klass) << "__initialize(VALUE self) { return Qnil; }" << endl;
   source
     << endl
-    << "static void initialize_" << klass.binding_name() << "()" << endl
+    << "static void initialize_" << binding_name(klass) << "()" << endl
     << '{' << endl
     << "  VALUE inherits = " << inherits_getter(klass) << ";" << endl
-    << "  // ruby context = " << klass.full_name << " -> " << klass.ruby_context() << endl
+    << "  // ruby context = " << klass.full_name << " -> " << ruby_context(klass) << endl
     << "  VALUE wrapped = " << wrapper_getter(klass) << ';' << endl
     << "  VALUE klass = rb_define_class_under(wrapped, \"" << klass.name << "\", inherits);" << endl
     << endl
     << "  RarityClass::register_ruby_class_for<" << klass.full_name << ">(klass);" << endl
-    << "  rb_define_method(klass, \"_initialize\", reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << "__initialize), 0);" << endl
+    << "  rb_define_method(klass, \"_initialize\", reinterpret_cast<RubyMethod>(binding_" << binding_name(klass) << "__initialize), 0);" << endl
     << "  rb_define_module_function(klass, \"finalize\", reinterpret_cast<RubyMethod>(Ruby::finalize_rarity_class), 1);" << endl;
   if (constructor)
-    source << "  rb_define_method(klass, \"initialize\", reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << '_' << constructor->binding_name() << "), " << constructor->params.size() << ");" << endl;
+    source << "  rb_define_method(klass, \"initialize\", reinterpret_cast<RubyMethod>(binding_" << binding_name(klass) << '_' << binding_name(*constructor) << "), " << constructor->params.size() << ");" << endl;
   for (const auto& method : klass.methods)
   {
     source
       << "  " << (method.is_static ? "rb_define_module_function" : "rb_define_method")
-      << "(klass, \"" << method.ruby_name() << "\", "
-      << "reinterpret_cast<RubyMethod>(binding_" << klass.binding_name() << '_' << method.binding_name() << "), "
+      << "(klass, \"" << ruby_name(method) << "\", "
+      << "reinterpret_cast<RubyMethod>(binding_" << binding_name(klass) << '_' << binding_name(klass) << "), "
       << method.params.size() << ");" << endl;
   }
   // TODO attributes ?
@@ -273,7 +274,7 @@ void Renderer::generate_constructor_binding(const ClassDefinition& klass, const 
 {
   source
     << "static VALUE binding_"
-    << klass.binding_name() << '_' << method.binding_name() << '('
+    << binding_name(klass) << '_' << binding_name(method) << '('
     << "VALUE self" << binding_params_for(method) << ')' << endl
     << '{' << endl
     << "  Ruby::Constant os(\"ObjectSpace\");" << endl
@@ -294,7 +295,7 @@ void Renderer::generate_static_method_binding(const ClassDefinition& klass, cons
 {
   source
     << "static VALUE binding_"
-    << klass.binding_name() << '_' << method.binding_name() << '('
+    << binding_name(klass) << '_' << binding_name(method) << '('
     << "VALUE self" << binding_params_for(method) << ')' << endl
     << '{' << endl;
   source << "  ";
@@ -311,7 +312,7 @@ void Renderer::generate_method_binding(const ClassDefinition& klass, const Metho
 {
   source
     << "static VALUE binding_"
-    << klass.binding_name() << '_' << method.binding_name() << '('
+    << binding_name(klass) << '_' << binding_name(method) << '('
     << "VALUE self" << binding_params_for(method) << ')' << endl
     << '{' << endl
     << "  long _ptr = Ruby::get_instance_pointer(self);" << endl
@@ -331,7 +332,7 @@ void Renderer::generate_function_binding(const FunctionDefinition& func)
 {
   source
     << "static VALUE binding_"
-    << func.binding_name() << '('
+    << binding_name(func) << '('
     << "VALUE self" << binding_params_for(func) << ')' << endl
     << '{' << endl
     << binding_params_check(func, func.full_name)

@@ -1,5 +1,5 @@
 libs =
-import libs += libclang%lib{clang}
+import libs += libtwili%lib{twili}
 import libs += libcrails-semantics%lib{crails-semantics}
 
 exe{rarity}: {hxx ixx txx cxx}{**} $libs testscript

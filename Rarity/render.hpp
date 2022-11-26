@@ -1,5 +1,5 @@
 #pragma once
-#include "parser/definitions.hpp"
+#include <libtwili/definitions.hpp>
 #include <filesystem>
 #include <sstream>
 #include <fstream>
