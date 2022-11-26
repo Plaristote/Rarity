@@ -88,11 +88,12 @@ struct NamespaceDefinition
 
 struct ClassDefinition : public NamespaceDefinition
 {
-  std::vector<std::string>        bases;
-  std::vector<std::string>        known_bases;
-  std::vector<MethodDefinition>   constructors;
-  std::vector<MethodDefinition>   methods;
-  TemplateParameters              template_parameters;
+  std::string                   type;
+  std::vector<std::string>      bases;
+  std::vector<std::string>      known_bases;
+  std::vector<MethodDefinition> constructors;
+  std::vector<MethodDefinition> methods;
+  TemplateParameters            template_parameters;
   bool is_empty() const { return constructors.size() + methods.size() == 0; }
   bool is_template() const { return template_parameters.size() > 0; }
 };

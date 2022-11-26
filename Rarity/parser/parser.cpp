@@ -248,6 +248,7 @@ CXChildVisitResult RarityParser::visit_class(const std::string& symbol_name, CXC
   new_class.klass.name = symbol_name;
   new_class.cursors.push_back(cursor);
   new_class.current_access = kind == CXCursor_StructDecl ? CX_CXXPublic : CX_CXXPrivate;
+  new_class.klass.type = kind == CXCursor_StructDecl ? "struct" : "class";
   if (parent.kind == CXCursor_TranslationUnit)
     new_class.klass.full_name = "::" + symbol_name;
   else if ((parent_class = find_class_for(parent)))
