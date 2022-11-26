@@ -50,12 +50,15 @@ struct InvokableDefinition
   std::optional<ParamDefinition> return_type;
   std::vector<ParamDefinition>   params;
   TemplateParameters template_parameters;
+  bool is_variadic = false;
   bool is_template() const { return template_parameters.size() > 0; }
 };
 
 struct MethodDefinition : public InvokableDefinition
 {
-  bool               is_static;
+  bool               is_static = false;
+  bool               is_virtual = false;
+  bool               is_pure_virtual = false;
   std::string        name;
   std::string        visibility;
 
@@ -96,4 +99,11 @@ struct ClassDefinition : public NamespaceDefinition
   TemplateParameters            template_parameters;
   bool is_empty() const { return constructors.size() + methods.size() == 0; }
   bool is_template() const { return template_parameters.size() > 0; }
+
+  bool has_unimplemented_methods() const
+  {
+    for (const auto& method : methods)
+      if (method.is_pure_virtual) return true;
+    return false;
+  }
 };

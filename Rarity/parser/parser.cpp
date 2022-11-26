@@ -307,6 +307,9 @@ MethodDefinition RarityParser::create_method(const std::string& symbol_name, CXC
 
   new_method.name = symbol_name;
   new_method.is_static = clang_CXXMethod_isStatic(cursor);
+  new_method.is_virtual = clang_CXXMethod_isVirtual(cursor);
+  new_method.is_pure_virtual = clang_CXXMethod_isPureVirtual(cursor);
+  new_method.is_variadic = clang_Cursor_isVariadic(cursor);
   if (return_type.kind != 0 && return_type.kind != CXType_Void)
     new_method.return_type = ParamDefinition(return_type, types);
   for (int i = 0 ; (arg_type = clang_getArgType(method_type, i)).kind != 0 ; ++i)
@@ -359,6 +362,7 @@ FunctionDefinition RarityParser::visit_function(const std::string& symbol_name, 
   auto context_name = fullname_for(parent);
 
   new_func.name = symbol_name;
+  new_func.is_variadic = clang_Cursor_isVariadic(cursor);
   if (context_name)
     new_func.full_name = *context_name + "::" + new_func.name;
   else
