@@ -43,6 +43,8 @@ struct ParamDefinition : public std::string
   int  is_pointer   = 0;
 
   std::string to_string() const;
+
+  bool operator==(const ParamDefinition& other) const { return to_string() == other.to_string(); }
 };
 
 struct InvokableDefinition
@@ -64,6 +66,7 @@ struct MethodDefinition : public InvokableDefinition
 
   std::string binding_name() const;
   std::string ruby_name() const;
+  bool operator==(const MethodDefinition&) const;
 };
 
 struct FunctionDefinition : public InvokableDefinition
@@ -82,7 +85,7 @@ struct NamespaceDefinition
   std::string name;
   std::string full_name;
 
-  bool operator==(const std::string& value) const { return name == value; }
+  bool operator==(const std::string& value) const { return full_name == value; }
   std::string binding_name() const;
   std::string ruby_name() const;
   std::string cpp_context() const;
@@ -99,11 +102,5 @@ struct ClassDefinition : public NamespaceDefinition
   TemplateParameters            template_parameters;
   bool is_empty() const { return constructors.size() + methods.size() == 0; }
   bool is_template() const { return template_parameters.size() > 0; }
-
-  bool has_unimplemented_methods() const
-  {
-    for (const auto& method : methods)
-      if (method.is_pure_virtual) return true;
-    return false;
-  }
+  bool implements(const MethodDefinition&) const;
 };

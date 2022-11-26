@@ -43,4 +43,5 @@ private:
   void generate_function_binding(const FunctionDefinition&);
 
   std::string ruby_class_getter(const ClassDefinition&);
+  bool is_interface(const ClassDefinition&, std::vector<ClassDefinition> parents = {}) const;
 };

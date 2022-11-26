@@ -95,7 +95,7 @@ void Renderer::generate_classes_bindings()
   source << "typedef VALUE (*RubyMethod)(...);" << endl << endl;
   for (const auto& klass : classes)
   {
-    if (klass.is_template()) continue ;
+    if (klass.is_template() || is_interface(klass)) continue ;
     generate_class_bindings(klass);
   }
   for (const auto& func : functions)
@@ -114,7 +114,7 @@ void Renderer::generate_classes_bindings()
     source << "  rb_define_module_under(" << wrapper_getter(ns, true) << ", \"" << Crails::camelize(ns.name, Crails::UpperCamelcase) << "\");" << endl;
   for (const auto& klass : classes)
   {
-    if (klass.is_template()) continue ;
+    if (klass.is_template() || is_interface(klass)) continue ;
     source << "  initialize_" << klass.binding_name() << "();" << endl;
   }
   for (const auto& func : functions)
@@ -342,4 +342,54 @@ void Renderer::generate_function_binding(const FunctionDefinition& func)
     << func.full_name << '(' << binding_params_apply(func) << ");" << endl
     << "  return " << (func.return_type ? "::cpp_to_ruby(ret);" : "Qnil;") << endl
     << '}' << endl;
+}
+
+static const ClassDefinition* find_class(const vector<ClassDefinition>& list, const string& name)
+{
+  for (const auto& candidate : list)
+  {
+    if (candidate.full_name == name)
+      return &candidate;
+  }
+  return nullptr;
+}
+
+static bool has_unimplemented_methods(const ClassDefinition& klass, vector<ClassDefinition> parents)
+{
+  for (const auto& method : klass.methods)
+  {
+    if (method.is_pure_virtual)
+    {
+      bool result = true;
+
+      for (const auto& parent : parents)
+      {
+        if (parent.implements(method))
+        {
+          result = false;
+          break ;
+        }
+      }
+      if (result)
+        return true;
+    }
+  }
+  return false;
+}
+
+bool Renderer::is_interface(const ClassDefinition& klass, vector<ClassDefinition> parents) const
+{
+  if (has_unimplemented_methods(klass, parents))
+    return true;
+  parents.push_back(klass);
+  for (const string& base_name : klass.known_bases)
+  {
+    auto* parent_class = find_class(classes, base_name);
+
+    if (!parent_class)
+      continue ;
+    if (is_interface(*parent_class, parents))
+      return true;
+  }
+  return false;
 }
